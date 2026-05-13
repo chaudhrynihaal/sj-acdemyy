@@ -1,14 +1,11 @@
 import {
-  badge,
   ctaButton,
-  detailRow,
-  detailRowHtml,
   emailShell,
-  escapeHtml,
-  leadHeading,
+  infoNote,
   nl2br,
   proseParagraph,
-  sectionTitle,
+  summaryCard,
+  type SummaryItem,
 } from "@/lib/email/email-layout";
 import { siteUrl } from "@/lib/email/site-url";
 import type { TemplatedMail } from "@/lib/email/enrollment-templates";
@@ -22,34 +19,44 @@ export function adminNewTestimonialEmail(params: {
   const subject = "[SJ Academy] New testimonial — review in admin";
   const dashUrl = `${siteUrl()}/admin/dashboard`;
 
-  const lines = [
-    "A new testimonial was submitted on sjacademy.com.",
-    "Review in Admin → Testimonials:",
+  const items: SummaryItem[] = [
+    { label: "Name", value: params.name },
+  ];
+  if (params.role) items.push({ label: "Label / Role", value: params.role });
+  items.push({ label: "Quote", valueHtml: nl2br(params.content) });
+
+  const inner = `
+${proseParagraph(
+  "A visitor shared feedback through the website. Approve it to display on the homepage, or reject it if it shouldn't be published.",
+)}
+${summaryCard(items, "Submission details")}
+${ctaButton(dashUrl, "Review in admin")}
+${infoNote(
+  `Approved testimonials appear on the SJ Academy homepage. Rejected submissions are kept on file but not published.`,
+)}
+`;
+
+  const text = [
+    "New testimonial — SJ Academy",
+    "",
+    "A new testimonial has been submitted on sjacademy.com.",
+    "Review it in Admin → Testimonials:",
     dashUrl,
     "",
     "---",
     `Name: ${params.name}`,
     params.role ? `Label: ${params.role}` : null,
     `Quote:\n${params.content}`,
-  ].filter(Boolean) as string[];
-
-  const text = lines.join("\n");
-
-  const inner = `
-${sectionTitle("Admin notification")}
-${leadHeading("New testimonial submitted")}
-${proseParagraph(
-  "Someone shared feedback through the website. Approve it to display on the homepage, or reject it if it should not be published.",
-)}
-${badge("Pending review", "amber")}
-${detailRow("Name", escapeHtml(params.name))}
-${params.role ? detailRow("Label", escapeHtml(params.role)) : ""}
-${detailRowHtml("Quote", nl2br(params.content))}
-${ctaButton(dashUrl, "Review in admin")}
-`;
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const html = emailShell({
     preheader: `Testimonial from ${params.name}`,
+    eyebrow: "Admin notification",
+    headline: "A new testimonial needs your review",
+    badgeLabel: "Pending review",
+    tone: "update",
     innerHtml: inner,
   });
 
