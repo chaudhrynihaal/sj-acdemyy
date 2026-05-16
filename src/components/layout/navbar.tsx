@@ -7,7 +7,6 @@ import { GraduationCap, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/", label: "Home" },
   { href: "/tuitions", label: "Tuitions" },
   { href: "/workshops", label: "Workshops" },
   { href: "/blogs", label: "Blogs" },
@@ -37,7 +36,7 @@ export function Navbar() {
         <nav className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
             <Link
-              key={l.href}
+              key={`${l.href}-${l.label}`}
               href={l.href}
               className={cn(
                 "text-sm font-medium transition-colors hover:text-amber-600",

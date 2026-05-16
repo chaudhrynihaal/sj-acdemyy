@@ -1,65 +1,79 @@
 import { FadeInUp } from "@/components/motion/fade-in-up";
-import { Card } from "@/components/ui/card";
 import type { Testimonial } from "@/lib/data";
 import { TestimonialSubmitDialog } from "@/components/home/testimonial-submit-dialog";
-
-const icons = ["💎", "📚", "🎯", "💡"] as const;
+import { Sparkles, BookOpen, Target, Heart } from "lucide-react";
 
 const reasons = [
   {
     title: "Proven pedagogy",
-    body: "Lesson plans built around examiners' expectations and real classroom experience.",
+    body: "Structured methodologies refined over years of successful teaching and learner feedback.",
+    Icon: Sparkles,
   },
   {
     title: "Curated materials",
-    body: "Notes, past-paper walkthroughs, and resources you can revisit anytime.",
+    body: "Exclusive resources and revision guides designed to target specific exam board requirements.",
+    Icon: BookOpen,
   },
   {
     title: "Goal-driven coaching",
-    body: "Targets set with you — tracked weekly so progress stays visible.",
+    body: "Clear objectives for every session, ensuring continuous progress and measurable growth.",
+    Icon: Target,
   },
   {
     title: "Supportive environment",
-    body: "Questions welcome. We explain until it clicks — no rushing ahead.",
+    body: "Warm, encouraging atmosphere where students feel safe to ask questions and take risks.",
+    Icon: Heart,
   },
 ];
 
 function TestimonialCard({ t }: { t: Testimonial }) {
   return (
-    <Card className="min-w-[280px] max-w-sm shrink-0 scale-100">
-      <p className="text-sm leading-relaxed text-slate-700">&ldquo;{t.content}&rdquo;</p>
-      <div className="mt-4 border-t border-slate-100 pt-4">
-        <p className="font-semibold text-navy">{t.name}</p>
-        {t.role ? (
-          <p className="text-xs font-medium text-amber-600">{t.role}</p>
-        ) : null}
+    <div className="relative rounded-xl border border-white/10 bg-navy/80 p-10">
+      <div className="pointer-events-none absolute right-10 top-8 select-none font-serif text-5xl text-gold/20">
+        &ldquo;
       </div>
-    </Card>
+      <p className="relative z-10 mb-8 text-base italic leading-relaxed text-slate-200">
+        &ldquo;{t.content}&rdquo;
+      </p>
+      <div className="flex items-center gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gold text-lg font-bold text-navy">
+          {t.name.charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <p className="font-bold text-white">{t.name}</p>
+          {t.role ? <p className="text-sm text-slate-400">{t.role}</p> : null}
+        </div>
+      </div>
+    </div>
   );
 }
 
 export function WhyChooseUs() {
   return (
     <section className="bg-muted py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-16">
         <FadeInUp>
-          <h2 className="text-center text-3xl font-extrabold text-navy sm:text-4xl">
-            Why choose us
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-center text-slate-600">
-            A premium learning experience without the noise — clarity, care, and consistency.
-          </p>
+          <div className="mb-12">
+            <h2 className="font-display text-3xl font-bold text-navy sm:text-4xl">
+              Why choose us
+            </h2>
+            <p className="mt-3 max-w-xl text-slate-600">
+              A premium learning experience without the noise — clarity, care,
+              and consistency.
+            </p>
+          </div>
         </FadeInUp>
-        <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {reasons.map((r, i) => (
             <FadeInUp key={r.title} delay={i * 0.06}>
-              <Card className="h-full text-center">
-                <div className="text-3xl" aria-hidden>
-                  {icons[i]}
+              <div className="h-full rounded-xl border border-slate-200 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded bg-slate-100">
+                  <r.Icon className="h-5 w-5 text-navy" strokeWidth={1.5} />
                 </div>
-                <h3 className="mt-4 text-lg font-bold text-navy">{r.title}</h3>
-                <p className="mt-2 text-sm text-slate-600">{r.body}</p>
-              </Card>
+                <h3 className="mb-3 text-lg font-bold text-navy">{r.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-600">{r.body}</p>
+              </div>
             </FadeInUp>
           ))}
         </div>
@@ -73,17 +87,17 @@ export function TestimonialsSection({ items }: { items: Testimonial[] }) {
     {
       id: "sample-1",
       name: "Amina R.",
-      role: "A-Level student",
+      role: "A-Level Student",
       content:
-        "The Sociology sessions made theories finally feel intuitive. My essays improved within weeks.",
+        "Sociology felt overwhelming until I joined SJ Academy. The curated materials and goal-driven coaching made complex theories accessible. I'm now aiming for an A* in my A Levels.",
       created_at: new Date().toISOString(),
     },
     {
       id: "sample-2",
       name: "Hassan K.",
-      role: "IGCSE English",
+      role: "O Level Student",
       content:
-        "Clear feedback on every piece of writing. I walked into the exam knowing exactly what to do.",
+        "The structured approach at SJ Academy completely changed my perspective on O Level English. The focus on exam technique alongside language mastery gave me the confidence I needed for my finals.",
       created_at: new Date().toISOString(),
     },
   ];
@@ -105,7 +119,6 @@ export function TestimonialsSection({ items }: { items: Testimonial[] }) {
           <TestimonialCard key={t.id} t={t} />
         ))}
       </div>
-      <TestimonialSubmitDialog />
     </section>
   );
 }
