@@ -13,28 +13,6 @@ type Workshop = {
   course: string;
 };
 
-const STORAGE_KEY = "sj_workshop_seen_ids";
-
-function getSeenIds(): string[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as string[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function markSeen(id: string) {
-  try {
-    const ids = getSeenIds();
-    if (!ids.includes(id)) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids, id]));
-    }
-  } catch {}
-}
-
 function formatDateTime(iso: string) {
   try {
     return new Date(iso).toLocaleString(undefined, {
@@ -60,9 +38,7 @@ export function WorkshopPopup() {
           .order("date_time", { ascending: true });
 
         if (!data?.length) return;
-        const seenIds = getSeenIds();
-        const unseen = data.find((w: Workshop) => !seenIds.includes(w.id));
-        if (unseen) setWorkshop(unseen as Workshop);
+        setWorkshop(data[0] as Workshop);
       } catch {
         // silently fail — popup is non-critical
       }
@@ -73,7 +49,6 @@ export function WorkshopPopup() {
   if (!workshop) return null;
 
   function dismiss() {
-    if (workshop) markSeen(workshop.id);
     setWorkshop(null);
   }
 
