@@ -95,7 +95,7 @@ export function TuitionsContent() {
             Weekly timings
           </p>
           <p className="mt-2 text-xl font-extrabold text-navy">Mon–Fri</p>
-          <p className="mt-1 text-2xl font-bold text-amber-700">4:00 PM – 8:30 PM</p>
+          <p className="mt-1 text-2xl font-bold text-amber-700">4 PM onwards</p>
         </div>
       </FadeInUp>
 

@@ -40,11 +40,11 @@ export function BlogsExplorer({ blogs }: { blogs: BlogListItem[] }) {
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <FadeInUp>
             <h1 className="text-center text-4xl font-extrabold text-navy sm:text-5xl">
-              Learning Resources
+              Blogs
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-center text-lg text-slate-600">
-              Articles, guides, and downloads from our tutors — curated for serious
-              students.
+              Insights, exam tips, and subject guides from our tutors — written to help
+              you think clearly and perform confidently.
             </p>
           </FadeInUp>
           <FadeInUp delay={0.08} className="mx-auto mt-10 max-w-xl">

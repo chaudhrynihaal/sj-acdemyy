@@ -100,7 +100,7 @@ export function TestimonialsSection({ items }: { items: Testimonial[] }) {
           Approved testimonials from our community.
         </p>
       </FadeInUp>
-      <div className="mt-12 flex gap-6 overflow-x-auto pb-4 pt-2 [scrollbar-width:thin]">
+      <div className="mt-12 flex gap-6 overflow-x-auto pb-4 pt-2 [scrollbar-width:thin] sm:gap-6">
         {list.map((t) => (
           <TestimonialCard key={t.id} t={t} />
         ))}

@@ -38,7 +38,7 @@ export async function getTotalStudents(): Promise<number> {
   } catch {
     /* missing env or network */
   }
-  return 120;
+  return 2000;
 }
 
 export async function getApprovedTestimonials(): Promise<Testimonial[]> {
@@ -91,6 +91,44 @@ export async function getResources(): Promise<ResourceItem[]> {
       .select("id,name,subject,file_url,created_at")
       .order("created_at", { ascending: false });
     return (data as ResourceItem[]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export type Workshop = {
+  id: string;
+  name: string;
+  date_time: string;
+  details: string | null;
+  description: string | null;
+  course: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export async function getActiveWorkshops(): Promise<Workshop[]> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("workshops")
+      .select("id,name,date_time,details,description,course,is_active,created_at")
+      .eq("is_active", true)
+      .order("date_time", { ascending: true });
+    return (data as Workshop[]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getAllWorkshops(): Promise<Workshop[]> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("workshops")
+      .select("id,name,date_time,details,description,course,is_active,created_at")
+      .order("created_at", { ascending: false });
+    return (data as Workshop[]) ?? [];
   } catch {
     return [];
   }

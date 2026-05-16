@@ -7,6 +7,7 @@ import { isResendSharedTestFrom, resendOwnerDeliveryHint } from "@/lib/email/res
 
 const DEMO = "demo_session";
 const ENROL = "subject_enrol";
+const WORKSHOP = "workshop_enrol";
 
 function clamp(s: string, max: number) {
   return s.length <= max ? s : s.slice(0, max);
@@ -35,7 +36,14 @@ export async function POST(request: Request) {
     typeof b.message === "string" && b.message.trim()
       ? clamp(b.message.trim(), 5000)
       : null;
-  const source = b.source === ENROL ? ENROL : b.source === DEMO ? DEMO : "";
+  const source =
+    b.source === ENROL
+      ? ENROL
+      : b.source === DEMO
+        ? DEMO
+        : b.source === WORKSHOP
+          ? WORKSHOP
+          : "";
   const subject =
     typeof b.subject === "string" && b.subject.trim()
       ? clamp(b.subject.trim(), 200)
@@ -48,11 +56,11 @@ export async function POST(request: Request) {
     );
   }
 
-  if (source !== DEMO && source !== ENROL) {
+  if (source !== DEMO && source !== ENROL && source !== WORKSHOP) {
     return NextResponse.json({ error: "Invalid request type." }, { status: 400 });
   }
 
-  if (source === ENROL && !subject) {
+  if ((source === ENROL || source === WORKSHOP) && !subject) {
     return NextResponse.json(
       { error: "Subject is required for course enquiries." },
       { status: 400 },
@@ -83,7 +91,7 @@ export async function POST(request: Request) {
     let lastOwnerMail: Awaited<ReturnType<typeof sendEmail>> | undefined;
 
     if (ownerTos.length > 0) {
-      const kind = source === DEMO ? "demo" : "enrol";
+      const kind = source === DEMO ? "demo" : "enrol"; // workshop maps to enrol kind
       const { subject: subj, text, html } = adminNewEnrollmentEmail({
         kind,
         fullName: full_name,
