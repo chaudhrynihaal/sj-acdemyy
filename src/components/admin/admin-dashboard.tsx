@@ -93,6 +93,7 @@ export function AdminDashboard() {
   const [blogSlug, setBlogSlug] = useState("");
   const [blogExcerpt, setBlogExcerpt] = useState("");
   const [blogBody, setBlogBody] = useState("");
+  const [blogCover, setBlogCover] = useState<File | null>(null);
   const [blogFile, setBlogFile] = useState<File | null>(null);
   const [blogLoading, setBlogLoading] = useState(false);
   const [blogMsg, setBlogMsg] = useState<string | null>(null);
@@ -367,6 +368,18 @@ export function AdminDashboard() {
     setBlogLoading(true);
     setBlogMsg(null);
     try {
+      let coverUrl: string | null = null;
+      if (blogCover) {
+        const path = `covers/${Date.now()}-${blogCover.name.replace(/\s+/g, "_")}`;
+        const { error: upErr } = await db.storage
+          .from("blogs-bucket")
+          .upload(path, blogCover, { upsert: false });
+        if (upErr) throw upErr;
+        const {
+          data: { publicUrl },
+        } = db.storage.from("blogs-bucket").getPublicUrl(path);
+        coverUrl = publicUrl;
+      }
       let fileUrl: string | null = null;
       if (blogFile) {
         const path = `uploads/${Date.now()}-${blogFile.name.replace(/\s+/g, "_")}`;
@@ -386,6 +399,7 @@ export function AdminDashboard() {
         slug,
         excerpt: blogExcerpt || null,
         body: blogBody || null,
+        cover_url: coverUrl,
         file_url: fileUrl,
       });
       if (insErr) throw insErr;
@@ -395,6 +409,7 @@ export function AdminDashboard() {
       setBlogSlug("");
       setBlogExcerpt("");
       setBlogBody("");
+      setBlogCover(null);
       setBlogFile(null);
     } catch {
       setBlogMsg("Could not create blog. Check slug uniqueness and storage.");
@@ -662,6 +677,17 @@ export function AdminDashboard() {
                 value={blogBody}
                 onChange={(e) => setBlogBody(e.target.value)}
                 className="mt-1 min-h-[200px]"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600">
+                Cover photo (optional)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setBlogCover(e.target.files?.[0] ?? null)}
+                className="mt-2 block w-full text-sm text-slate-600"
               />
             </div>
             <div>

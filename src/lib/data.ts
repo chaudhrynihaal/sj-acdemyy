@@ -14,6 +14,7 @@ export type BlogListItem = {
   author: string;
   slug: string;
   excerpt: string | null;
+  cover_url: string | null;
   file_url: string | null;
   published_at: string;
 };
@@ -61,7 +62,7 @@ export async function getBlogs(): Promise<BlogListItem[]> {
     const supabase = await createClient();
     const { data } = await supabase
       .from("blogs")
-      .select("id,title,author,slug,excerpt,file_url,published_at")
+      .select("id,title,author,slug,excerpt,cover_url,file_url,published_at")
       .order("published_at", { ascending: false });
     return (data as BlogListItem[]) ?? [];
   } catch {

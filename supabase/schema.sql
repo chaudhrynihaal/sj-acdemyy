@@ -33,10 +33,14 @@ create table if not exists public.blogs (
   slug text not null unique,
   excerpt text,
   body text,
+  cover_url text,
   file_url text,
   published_at timestamptz default now(),
   created_at timestamptz default now()
 );
+
+-- Existing DBs: add cover_url if table predates this column
+alter table public.blogs add column if not exists cover_url text;
 
 -- Resources
 create table if not exists public.resources (

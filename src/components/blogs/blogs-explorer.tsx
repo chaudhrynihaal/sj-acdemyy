@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Download, Search } from "lucide-react";
 import type { BlogListItem } from "@/lib/data";
@@ -120,7 +121,20 @@ export function BlogsExplorer({ blogs }: { blogs: BlogListItem[] }) {
               {filtered.map((b, i) => (
                 <FadeInUp key={b.id} delay={Math.min(i * 0.04, 0.2)}>
                   <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:border-navy hover:shadow-md">
-                    <div className="flex flex-grow flex-col border-t-4 border-gold p-8">
+                    {b.cover_url ? (
+                      <div className="relative h-48 w-full overflow-hidden">
+                        <Image
+                          src={b.cover_url}
+                          alt={b.title}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-2 w-full bg-gold" />
+                    )}
+                    <div className="flex flex-grow flex-col p-8">
                       <p className="text-xs font-semibold uppercase tracking-widest text-gold">
                         {formatDate(b.published_at)}
                       </p>
