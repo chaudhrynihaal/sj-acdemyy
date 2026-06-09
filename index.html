@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SJ Academy | English &amp; Sociology Tuition</title>
+    <meta
+      name="description"
+      content="World-class online and face-to-face tuition in Faisalabad. English Language and Sociology with experienced tutors. Over 23 years of experience."
+    />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --navy: #1e2a4a;
+        --amber: #f59e0b;
+        --amber-light: #fef3c7;
+        --slate: #475569;
+        --white: #ffffff;
+        --bg: #f8fafc;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--slate);
+        line-height: 1.6;
+      }
+
+      /* NAV */
+      nav {
+        background: var(--white);
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      }
+
+      .nav-brand {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: var(--navy);
+        text-decoration: none;
+        letter-spacing: -.3px;
+      }
+
+      .nav-brand span { color: var(--amber); }
+
+      .nav-links { display: flex; gap: 1.5rem; list-style: none; }
+      .nav-links a {
+        text-decoration: none;
+        color: var(--slate);
+        font-size: .9rem;
+        font-weight: 500;
+        transition: color .2s;
+      }
+      .nav-links a:hover { color: var(--amber); }
+
+      /* HERO */
+      .hero {
+        background: linear-gradient(160deg, #f0f4ff 0%, var(--white) 60%);
+        padding: 5rem 1.5rem 4rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        right: -6rem; top: 0;
+        width: 24rem; height: 24rem;
+        border-radius: 50%;
+        background: rgba(245,158,11,.08);
+        filter: blur(60px);
+        pointer-events: none;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        left: -6rem; bottom: 0;
+        width: 18rem; height: 18rem;
+        border-radius: 50%;
+        background: rgba(16,185,129,.08);
+        filter: blur(60px);
+        pointer-events: none;
+      }
+
+      .hero-label {
+        display: inline-block;
+        font-size: .75rem;
+        font-weight: 700;
+        letter-spacing: .15em;
+        text-transform: uppercase;
+        color: var(--amber);
+        margin-bottom: .75rem;
+      }
+
+      .hero h1 {
+        font-size: clamp(2.2rem, 5vw, 3.75rem);
+        font-weight: 900;
+        color: var(--navy);
+        line-height: 1.15;
+        letter-spacing: -.5px;
+      }
+
+      .hero-sub {
+        margin-top: .5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--amber);
+      }
+
+      .hero p {
+        margin: 1.2rem auto 0;
+        max-width: 560px;
+        font-size: 1rem;
+        color: var(--slate);
+      }
+
+      .hero-actions {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .btn-primary {
+        background: var(--navy);
+        color: var(--white);
+        padding: .75rem 2rem;
+        border-radius: 9999px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: .9rem;
+        transition: background .2s, transform .15s;
+        box-shadow: 0 4px 14px rgba(30,42,74,.3);
+      }
+
+      .btn-primary:hover { background: #2d3e6b; transform: translateY(-1px); }
+
+      .btn-outline {
+        border: 2px solid var(--amber);
+        color: var(--navy);
+        padding: .72rem 1.8rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: .9rem;
+        background: var(--white);
+        transition: background .2s;
+      }
+
+      .btn-outline:hover { background: var(--amber-light); }
+
+      /* STATS */
+      .stats {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 2rem;
+        padding: 3rem 1.5rem;
+        background: var(--white);
+        border-top: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .stat { text-align: center; }
+      .stat-num {
+        font-size: 2.2rem;
+        font-weight: 900;
+        color: var(--navy);
+        line-height: 1;
+      }
+      .stat-num span { color: var(--amber); }
+      .stat-label { font-size: .85rem; color: var(--slate); margin-top: .25rem; }
+
+      /* SUBJECTS */
+      .section { padding: 4rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+
+      .section-title {
+        text-align: center;
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--navy);
+        margin-bottom: .5rem;
+      }
+
+      .section-subtitle {
+        text-align: center;
+        color: var(--slate);
+        margin-bottom: 2.5rem;
+        font-size: .95rem;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .card {
+        background: var(--white);
+        border-radius: 14px;
+        padding: 2rem 1.75rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,.07);
+        border: 1px solid #e2e8f0;
+        transition: transform .2s, box-shadow .2s;
+      }
+
+      .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.1); }
+
+      .card-icon {
+        font-size: 2rem;
+        margin-bottom: .75rem;
+      }
+
+      .card h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--navy);
+        margin-bottom: .5rem;
+      }
+
+      .card p { font-size: .9rem; color: var(--slate); }
+
+      /* CTA */
+      .cta {
+        background: var(--navy);
+        color: var(--white);
+        text-align: center;
+        padding: 4rem 1.5rem;
+      }
+
+      .cta h2 { font-size: 1.9rem; font-weight: 800; margin-bottom: .75rem; }
+      .cta p { opacity: .8; margin-bottom: 2rem; max-width: 480px; margin-left: auto; margin-right: auto; }
+
+      .btn-amber {
+        background: var(--amber);
+        color: var(--navy);
+        padding: .85rem 2.5rem;
+        border-radius: 9999px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: .95rem;
+        display: inline-block;
+        transition: opacity .2s, transform .15s;
+      }
+
+      .btn-amber:hover { opacity: .9; transform: translateY(-1px); }
+
+      /* FOOTER */
+      footer {
+        background: #0f172a;
+        color: #94a3b8;
+        text-align: center;
+        padding: 2rem 1.5rem;
+        font-size: .85rem;
+      }
+
+      footer a { color: var(--amber); text-decoration: none; }
+
+      @media (max-width: 640px) {
+        .nav-links { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- NAV -->
+    <nav>
+      <a class="nav-brand" href="#"><span>SJ</span> Academy</a>
+      <ul class="nav-links">
+        <li><a href="#subjects">Subjects</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+      <span class="hero-label">SJ Academy</span>
+      <h1>Shanzay Jawad</h1>
+      <p class="hero-sub">Educationist &bull; English &amp; Sociology Specialist</p>
+      <p>
+        Over 23 years of experience specialising in O-Level / A-Level / IGCSE
+        English and Sociology — taught with structure, warmth, and relentless
+        attention to exam success.
+      </p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="#subjects">View Tuitions</a>
+        <a class="btn-outline" href="#contact">Get in Touch</a>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">23<span>+</span></div>
+        <div class="stat-label">Years of Experience</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">500<span>+</span></div>
+        <div class="stat-label">Students Taught</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">98<span>%</span></div>
+        <div class="stat-label">Pass Rate</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">4</div>
+        <div class="stat-label">Exam Boards Covered</div>
+      </div>
+    </div>
+
+    <!-- SUBJECTS -->
+    <div id="subjects" class="section">
+      <h2 class="section-title">Subjects &amp; Programmes</h2>
+      <p class="section-subtitle">Expert tuition tailored to every exam board and learning style.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">📖</div>
+          <h3>English Language</h3>
+          <p>O-Level, A-Level, and IGCSE. Reading, writing, comprehension, and exam technique mastered step by step.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🌍</div>
+          <h3>Sociology</h3>
+          <p>In-depth coverage of A-Level Sociology with essay structure, case studies, and critical thinking skills.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">💻</div>
+          <h3>Online &amp; In-Person</h3>
+          <p>Flexible sessions available online (Zoom / Meet) or face-to-face in Faisalabad — your choice.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📝</div>
+          <h3>Workshops</h3>
+          <p>Intensive exam-prep workshops before major exam seasons covering past papers and marking schemes.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABOUT -->
+    <div id="about" class="section" style="padding-top: 0;">
+      <h2 class="section-title">Why Choose SJ Academy?</h2>
+      <p class="section-subtitle">A track record built on results, care, and decades of expertise.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">🏆</div>
+          <h3>Proven Results</h3>
+          <p>Students consistently achieve A* and A grades thanks to structured exam practice and personalised feedback.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🎯</div>
+          <h3>Exam-Focused</h3>
+          <p>Every lesson is built around what examiners want — mark schemes, command words, and model answers.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">❤️</div>
+          <h3>Personal Attention</h3>
+          <p>Small batch sizes ensure every student receives individual feedback and a plan tailored to their needs.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <section id="contact" class="cta">
+      <h2>Ready to Excel?</h2>
+      <p>Join hundreds of students who have transformed their grades with SJ Academy. Limited seats available.</p>
+      <a class="btn-amber" href="mailto:contact@sjacademy.com">Enrol Now</a>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      <p>&copy; 2026 SJ Academy &mdash; Shanzay Jawad. All rights reserved.</p>
+      <p style="margin-top:.5rem">Faisalabad, Pakistan &bull; English &amp; Sociology Tuition</p>
+    </footer>
+
+  </body>
+</html>
