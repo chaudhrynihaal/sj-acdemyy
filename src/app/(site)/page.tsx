@@ -8,15 +8,20 @@ import {
   WhyChooseUs,
 } from "@/components/home/why-testimonials";
 import { HomeCta } from "@/components/home/home-cta";
+import { LatestContent } from "@/components/home/latest-content";
 import {
   getApprovedTestimonials,
+  getBlogs,
+  getResources,
   getTotalStudents,
 } from "@/lib/data";
 
 export default async function HomePage() {
-  const [totalStudents, testimonials] = await Promise.all([
+  const [totalStudents, testimonials, blogs, resources] = await Promise.all([
     getTotalStudents(),
     getApprovedTestimonials(),
+    getBlogs(),
+    getResources(),
   ]);
 
   return (
@@ -88,6 +93,7 @@ export default async function HomePage() {
       </section>
 
       <SubjectSection />
+      <LatestContent blogs={blogs.slice(0, 3)} resources={resources.slice(0, 3)} />
       <WhyChooseUs />
       <TestimonialsSection items={testimonials} />
       <HomeCta />

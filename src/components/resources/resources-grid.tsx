@@ -4,11 +4,22 @@ import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import type { ResourceItem } from "@/lib/data";
 import { FadeInUp } from "@/components/motion/fade-in-up";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const pills = ["All", "English", "Sociology", "General"] as const;
+
+function formatDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString("en-GB", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch {
+    return "";
+  }
+}
 
 function subjectTone(s: string): "amber" | "emerald" | "slate" {
   if (s === "English") return "amber";
@@ -61,23 +72,31 @@ export function ResourcesGrid({ resources }: { resources: ResourceItem[] }) {
         ) : (
           filtered.map((r, i) => (
             <FadeInUp key={r.id} delay={Math.min(i * 0.04, 0.2)}>
-              <Card className="flex h-full flex-col">
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="text-lg font-bold text-navy">{r.name}</h2>
-                  <Badge tone={subjectTone(r.subject)}>{r.subject}</Badge>
+              <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:border-navy hover:shadow-md">
+                <div className="h-2 w-full bg-gold" />
+                <div className="flex flex-grow flex-col p-8">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gold">
+                    {formatDate(r.created_at)}
+                  </p>
+                  <h2 className="font-display mt-3 text-xl font-bold leading-snug text-navy">
+                    {r.name}
+                  </h2>
+                  <div className="mt-3 flex-1">
+                    <Badge tone={subjectTone(r.subject)}>{r.subject}</Badge>
+                  </div>
+                  <div className="mt-8">
+                    <a
+                      href={`${r.file_url}?download=${encodeURIComponent(r.name)}.pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg bg-navy px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download
+                    </a>
+                  </div>
                 </div>
-                <div className="mt-6">
-                  <a
-                    href={r.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-navy px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:scale-[1.02] hover:bg-slate-800"
-                  >
-                    <Download className="h-4 w-4" />
-                    Download
-                  </a>
-                </div>
-              </Card>
+              </div>
             </FadeInUp>
           ))
         )}

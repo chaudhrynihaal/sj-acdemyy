@@ -3,7 +3,7 @@
 import { startTransition, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, Pencil, Trash2, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { slugify } from "@/lib/slugify";
@@ -53,6 +53,51 @@ type WorkshopRow = {
   created_at: string;
 };
 
+type ResourceRow = {
+  id: string;
+  name: string;
+  subject: string;
+  file_url: string;
+  created_at: string;
+};
+
+type BlogRow = {
+  id: string;
+  title: string;
+  author: string;
+  slug: string;
+  excerpt: string | null;
+  body: string | null;
+  cover_url: string | null;
+  file_url: string | null;
+  published_at: string;
+};
+
+function safeStorageName(name: string): string {
+  const dot = name.lastIndexOf(".");
+  const base = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot + 1) : "";
+  const safeBase =
+    base
+      .normalize("NFKD")
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "file";
+  const safeExt = ext.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+  return safeExt ? `${safeBase}.${safeExt}` : safeBase;
+}
+
+function errorMessage(err: unknown): string {
+  if (
+    err &&
+    typeof err === "object" &&
+    "message" in err &&
+    typeof (err as { message: unknown }).message === "string"
+  ) {
+    return (err as { message: string }).message;
+  }
+  return String(err);
+}
+
 function formatDateTime(iso: string) {
   try {
     return new Date(iso).toLocaleString(undefined, {
@@ -87,6 +132,9 @@ export function AdminDashboard() {
   const [resFile, setResFile] = useState<File | null>(null);
   const [resLoading, setResLoading] = useState(false);
   const [resMsg, setResMsg] = useState<string | null>(null);
+  const [resList, setResList] = useState<ResourceRow[]>([]);
+  const [resListBusy, setResListBusy] = useState(false);
+  const [resDeletingId, setResDeletingId] = useState<string | null>(null);
 
   const [blogTitle, setBlogTitle] = useState("");
   const [blogAuthor, setBlogAuthor] = useState("");
@@ -97,9 +145,22 @@ export function AdminDashboard() {
   const [blogFile, setBlogFile] = useState<File | null>(null);
   const [blogLoading, setBlogLoading] = useState(false);
   const [blogMsg, setBlogMsg] = useState<string | null>(null);
+  const [blogList, setBlogList] = useState<BlogRow[]>([]);
+  const [blogListBusy, setBlogListBusy] = useState(false);
+  const [blogDeletingId, setBlogDeletingId] = useState<string | null>(null);
+  const [blogEditingId, setBlogEditingId] = useState<string | null>(null);
 
   const [pending, setPending] = useState<PendingTestimonial[]>([]);
   const [testLoading, setTestLoading] = useState(false);
+  const [tName, setTName] = useState("");
+  const [tRole, setTRole] = useState("");
+  const [tContent, setTContent] = useState("");
+  const [tAddLoading, setTAddLoading] = useState(false);
+  const [tAddMsg, setTAddMsg] = useState<string | null>(null);
+  const [approvedT, setApprovedT] = useState<PendingTestimonial[]>([]);
+  const [approvedTBusy, setApprovedTBusy] = useState(false);
+  const [tEditingId, setTEditingId] = useState<string | null>(null);
+  const [tDeletingId, setTDeletingId] = useState<string | null>(null);
 
   const [demoRequests, setDemoRequests] = useState<EnrollmentRequest[]>([]);
   const [demoBusy, setDemoBusy] = useState(false);
@@ -139,6 +200,32 @@ export function AdminDashboard() {
     };
   }, [db]);
 
+  const loadResources = useCallback(async () => {
+    if (!db) return;
+    setResListBusy(true);
+    const { data, error } = await db
+      .from("resources")
+      .select("id,name,subject,file_url,created_at")
+      .order("created_at", { ascending: false });
+    startTransition(() => {
+      if (!error && data) setResList(data as ResourceRow[]);
+      setResListBusy(false);
+    });
+  }, [db]);
+
+  const loadBlogs = useCallback(async () => {
+    if (!db) return;
+    setBlogListBusy(true);
+    const { data, error } = await db
+      .from("blogs")
+      .select("id,title,author,slug,excerpt,body,cover_url,file_url,published_at")
+      .order("published_at", { ascending: false });
+    startTransition(() => {
+      if (!error && data) setBlogList(data as BlogRow[]);
+      setBlogListBusy(false);
+    });
+  }, [db]);
+
   const loadPending = useCallback(async () => {
     if (!db) return;
     setTestLoading(true);
@@ -150,6 +237,20 @@ export function AdminDashboard() {
     startTransition(() => {
       if (!error && data) setPending(data as PendingTestimonial[]);
       setTestLoading(false);
+    });
+  }, [db]);
+
+  const loadApprovedTestimonials = useCallback(async () => {
+    if (!db) return;
+    setApprovedTBusy(true);
+    const { data, error } = await db
+      .from("testimonials")
+      .select("id,name,content,role,created_at")
+      .eq("status", "approved")
+      .order("created_at", { ascending: false });
+    startTransition(() => {
+      if (!error && data) setApprovedT(data as PendingTestimonial[]);
+      setApprovedTBusy(false);
     });
   }, [db]);
 
@@ -242,6 +343,16 @@ export function AdminDashboard() {
   }, [db]);
 
   useEffect(() => {
+    if (!db || tab !== "resources") return;
+    void loadResources();
+  }, [db, tab, loadResources]);
+
+  useEffect(() => {
+    if (!db || tab !== "blogs") return;
+    void loadBlogs();
+  }, [db, tab, loadBlogs]);
+
+  useEffect(() => {
     if (!db || tab !== "testimonials") return;
     let cancelled = false;
     db.from("testimonials")
@@ -254,10 +365,11 @@ export function AdminDashboard() {
           if (!error && data) setPending(data as PendingTestimonial[]);
         });
       });
+    void loadApprovedTestimonials();
     return () => {
       cancelled = true;
     };
-  }, [db, tab]);
+  }, [db, tab, loadApprovedTestimonials]);
 
   useEffect(() => {
     if (!db || tab !== "demo_requests") return;
@@ -335,10 +447,14 @@ export function AdminDashboard() {
   async function handleResourceSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!db || !resFile) return;
+    if (resFile.size === 0) {
+      setResMsg("Selected file is empty (0 bytes). Re-select the PDF and try again.");
+      return;
+    }
     setResLoading(true);
     setResMsg(null);
     try {
-      const path = `uploads/${Date.now()}-${resFile.name.replace(/\s+/g, "_")}`;
+      const path = `uploads/${Date.now()}-${safeStorageName(resFile.name)}`;
       const { error: upErr } = await db.storage
         .from("resources-bucket")
         .upload(path, resFile, { upsert: false });
@@ -355,22 +471,49 @@ export function AdminDashboard() {
       setResMsg("Resource published.");
       setResName("");
       setResFile(null);
-    } catch {
-      setResMsg("Upload failed. Check bucket policies and file type.");
+      void loadResources();
+    } catch (err) {
+      setResMsg(`Upload failed: ${errorMessage(err)}`);
     } finally {
       setResLoading(false);
+    }
+  }
+
+  async function handleResourceDelete(r: ResourceRow) {
+    if (!db) return;
+    setResDeletingId(r.id);
+    try {
+      const marker = "/object/public/resources-bucket/";
+      const idx = r.file_url.indexOf(marker);
+      if (idx !== -1) {
+        const path = decodeURIComponent(
+          r.file_url.slice(idx + marker.length).split("?")[0],
+        );
+        await db.storage.from("resources-bucket").remove([path]);
+      }
+      const { error } = await db.from("resources").delete().eq("id", r.id);
+      if (error) throw error;
+      setResList((prev) => prev.filter((x) => x.id !== r.id));
+    } catch (err) {
+      setResMsg(`Could not delete resource: ${errorMessage(err)}`);
+    } finally {
+      setResDeletingId(null);
     }
   }
 
   async function handleBlogSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!db) return;
+    if ((blogCover && blogCover.size === 0) || (blogFile && blogFile.size === 0)) {
+      setBlogMsg("Selected file is empty (0 bytes). Re-select it and try again.");
+      return;
+    }
     setBlogLoading(true);
     setBlogMsg(null);
     try {
       let coverUrl: string | null = null;
       if (blogCover) {
-        const path = `covers/${Date.now()}-${blogCover.name.replace(/\s+/g, "_")}`;
+        const path = `covers/${Date.now()}-${safeStorageName(blogCover.name)}`;
         const { error: upErr } = await db.storage
           .from("blogs-bucket")
           .upload(path, blogCover, { upsert: false });
@@ -382,7 +525,7 @@ export function AdminDashboard() {
       }
       let fileUrl: string | null = null;
       if (blogFile) {
-        const path = `uploads/${Date.now()}-${blogFile.name.replace(/\s+/g, "_")}`;
+        const path = `uploads/${Date.now()}-${safeStorageName(blogFile.name)}`;
         const { error: upErr } = await db.storage
           .from("blogs-bucket")
           .upload(path, blogFile, { upsert: false });
@@ -393,17 +536,44 @@ export function AdminDashboard() {
         fileUrl = publicUrl;
       }
       const slug = (blogSlug.trim() || slugify(blogTitle)).trim();
-      const { error: insErr } = await db.from("blogs").insert({
-        title: blogTitle,
-        author: blogAuthor,
-        slug,
-        excerpt: blogExcerpt || null,
-        body: blogBody || null,
-        cover_url: coverUrl,
-        file_url: fileUrl,
-      });
-      if (insErr) throw insErr;
-      setBlogMsg("Blog post created.");
+      if (blogEditingId) {
+        const update: {
+          title: string;
+          author: string;
+          slug: string;
+          excerpt: string | null;
+          body: string | null;
+          cover_url?: string;
+          file_url?: string;
+        } = {
+          title: blogTitle,
+          author: blogAuthor,
+          slug,
+          excerpt: blogExcerpt || null,
+          body: blogBody || null,
+        };
+        if (coverUrl) update.cover_url = coverUrl;
+        if (fileUrl) update.file_url = fileUrl;
+        const { error: updErr } = await db
+          .from("blogs")
+          .update(update)
+          .eq("id", blogEditingId);
+        if (updErr) throw updErr;
+        setBlogMsg("Blog post updated.");
+      } else {
+        const { error: insErr } = await db.from("blogs").insert({
+          title: blogTitle,
+          author: blogAuthor,
+          slug,
+          excerpt: blogExcerpt || null,
+          body: blogBody || null,
+          cover_url: coverUrl,
+          file_url: fileUrl,
+        });
+        if (insErr) throw insErr;
+        setBlogMsg("Blog post created.");
+      }
+      setBlogEditingId(null);
       setBlogTitle("");
       setBlogAuthor("");
       setBlogSlug("");
@@ -411,10 +581,132 @@ export function AdminDashboard() {
       setBlogBody("");
       setBlogCover(null);
       setBlogFile(null);
-    } catch {
-      setBlogMsg("Could not create blog. Check slug uniqueness and storage.");
+      void loadBlogs();
+    } catch (err) {
+      setBlogMsg(`Could not save blog: ${errorMessage(err)}`);
     } finally {
       setBlogLoading(false);
+    }
+  }
+
+  function startBlogEdit(b: BlogRow) {
+    setBlogEditingId(b.id);
+    setBlogTitle(b.title);
+    setBlogAuthor(b.author);
+    setBlogSlug(b.slug);
+    setBlogExcerpt(b.excerpt ?? "");
+    setBlogBody(b.body ?? "");
+    setBlogCover(null);
+    setBlogFile(null);
+    setBlogMsg(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelBlogEdit() {
+    setBlogEditingId(null);
+    setBlogTitle("");
+    setBlogAuthor("");
+    setBlogSlug("");
+    setBlogExcerpt("");
+    setBlogBody("");
+    setBlogCover(null);
+    setBlogFile(null);
+    setBlogMsg(null);
+  }
+
+  async function handleBlogDelete(b: BlogRow) {
+    if (!db) return;
+    setBlogDeletingId(b.id);
+    try {
+      const marker = "/object/public/blogs-bucket/";
+      const paths: string[] = [];
+      for (const url of [b.cover_url, b.file_url]) {
+        if (!url) continue;
+        const idx = url.indexOf(marker);
+        if (idx !== -1) {
+          paths.push(decodeURIComponent(url.slice(idx + marker.length).split("?")[0]));
+        }
+      }
+      if (paths.length > 0) {
+        await db.storage.from("blogs-bucket").remove(paths);
+      }
+      const { error } = await db.from("blogs").delete().eq("id", b.id);
+      if (error) throw error;
+      setBlogList((prev) => prev.filter((x) => x.id !== b.id));
+    } catch (err) {
+      setBlogMsg(`Could not delete blog: ${errorMessage(err)}`);
+    } finally {
+      setBlogDeletingId(null);
+    }
+  }
+
+  async function handleTestimonialAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!db) return;
+    setTAddLoading(true);
+    setTAddMsg(null);
+    try {
+      if (tEditingId) {
+        const { error } = await db
+          .from("testimonials")
+          .update({
+            name: tName.trim(),
+            role: tRole.trim() || null,
+            content: tContent.trim(),
+          })
+          .eq("id", tEditingId);
+        if (error) throw error;
+        setTAddMsg("Testimonial updated.");
+      } else {
+        const { error } = await db.from("testimonials").insert({
+          name: tName.trim(),
+          role: tRole.trim() || null,
+          content: tContent.trim(),
+          status: "approved",
+        });
+        if (error) throw error;
+        setTAddMsg("Testimonial added — it is live on the site.");
+      }
+      setTEditingId(null);
+      setTName("");
+      setTRole("");
+      setTContent("");
+      void loadApprovedTestimonials();
+    } catch (err) {
+      setTAddMsg(`Could not save testimonial: ${errorMessage(err)}`);
+    } finally {
+      setTAddLoading(false);
+    }
+  }
+
+  function startTestimonialEdit(t: PendingTestimonial) {
+    setTEditingId(t.id);
+    setTName(t.name);
+    setTRole(t.role ?? "");
+    setTContent(t.content);
+    setTAddMsg(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelTestimonialEdit() {
+    setTEditingId(null);
+    setTName("");
+    setTRole("");
+    setTContent("");
+    setTAddMsg(null);
+  }
+
+  async function handleApprovedTestimonialDelete(id: string) {
+    if (!db) return;
+    setTDeletingId(id);
+    try {
+      const { error } = await db.from("testimonials").delete().eq("id", id);
+      if (error) throw error;
+      setApprovedT((prev) => prev.filter((x) => x.id !== id));
+    } catch (err) {
+      setTAddMsg(`Could not delete testimonial: ${errorMessage(err)}`);
+    } finally {
+      setTDeletingId(null);
     }
   }
 
@@ -424,7 +716,10 @@ export function AdminDashboard() {
       .from("testimonials")
       .update({ status: "approved" })
       .eq("id", id);
-    if (!error) void loadPending();
+    if (!error) {
+      void loadPending();
+      void loadApprovedTestimonials();
+    }
   }
 
   async function rejectTestimonial(id: string) {
@@ -586,56 +881,127 @@ export function AdminDashboard() {
         }`}
       >
         {tab === "resources" ? (
-          <form
-            onSubmit={(e) => void handleResourceSubmit(e)}
-            className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-lg"
-          >
-            <h2 className="text-xl font-bold text-navy">Upload resource</h2>
-            <div>
-              <label className="text-xs font-semibold text-slate-600">Name</label>
-              <Input
-                required
-                value={resName}
-                onChange={(e) => setResName(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600">Subject</label>
-              <select
-                value={resSubject}
-                onChange={(e) => setResSubject(e.target.value)}
-                className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-              >
-                <option>English</option>
-                <option>Sociology</option>
-                <option>General</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600">File</label>
-              <input
-                required
-                type="file"
-                onChange={(e) => setResFile(e.target.files?.[0] ?? null)}
-                className="mt-2 block w-full text-sm text-slate-600"
-              />
-            </div>
-            {resMsg ? (
-              <p className="text-sm text-emerald-700">{resMsg}</p>
-            ) : null}
-            <Button type="submit" loading={resLoading}>
-              Publish resource
-            </Button>
-          </form>
+          <div className="space-y-8">
+            <form
+              onSubmit={(e) => void handleResourceSubmit(e)}
+              className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-lg"
+            >
+              <h2 className="text-xl font-bold text-navy">Upload resource</h2>
+              <div>
+                <label className="text-xs font-semibold text-slate-600">Name</label>
+                <Input
+                  required
+                  value={resName}
+                  onChange={(e) => setResName(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600">Subject</label>
+                <select
+                  value={resSubject}
+                  onChange={(e) => setResSubject(e.target.value)}
+                  className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                >
+                  <option>English</option>
+                  <option>Sociology</option>
+                  <option>General</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600">File</label>
+                <input
+                  required
+                  id="resource-file"
+                  type="file"
+                  onChange={(e) => setResFile(e.target.files?.[0] ?? null)}
+                  className="sr-only"
+                />
+                <div className="mt-2 flex items-center gap-3">
+                  <label
+                    htmlFor="resource-file"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-navy px-3 py-1.5 text-xs font-semibold text-white shadow-md transition-all hover:bg-slate-800"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Upload file
+                  </label>
+                  {resFile ? (
+                    <span className="truncate text-sm text-slate-500">
+                      {resFile.name}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              {resMsg ? (
+                <p
+                  className={`text-sm ${
+                    /published|created|updated/i.test(resMsg)
+                      ? "text-emerald-700"
+                      : "text-red-600"
+                  }`}
+                >
+                  {resMsg}
+                </p>
+              ) : null}
+              <Button type="submit" loading={resLoading}>
+                Publish resource
+              </Button>
+            </form>
+
+            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-lg">
+              <h2 className="text-xl font-bold text-navy">Uploaded resources</h2>
+              {resListBusy ? (
+                <p className="mt-4 text-sm text-slate-500">Loading…</p>
+              ) : resList.length === 0 ? (
+                <p className="mt-4 text-sm text-slate-500">
+                  No resources uploaded yet.
+                </p>
+              ) : (
+                <ul className="mt-4 divide-y divide-slate-100">
+                  {resList.map((r) => (
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between gap-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <a
+                          href={r.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block truncate text-sm font-semibold text-navy hover:underline"
+                        >
+                          {r.name}
+                        </a>
+                        <p className="text-xs text-slate-500">
+                          {r.subject} · {formatDateTime(r.created_at)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleResourceDelete(r)}
+                        disabled={resDeletingId === r.id}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {resDeletingId === r.id ? "Deleting…" : "Delete"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
         ) : null}
 
         {tab === "blogs" ? (
+          <div className="space-y-8">
           <form
             onSubmit={(e) => void handleBlogSubmit(e)}
             className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-lg"
           >
-            <h2 className="text-xl font-bold text-navy">Create blog post</h2>
+            <h2 className="text-xl font-bold text-navy">
+              {blogEditingId ? "Edit blog post" : "Create blog post"}
+            </h2>
             <div>
               <label className="text-xs font-semibold text-slate-600">Title</label>
               <Input
@@ -684,33 +1050,206 @@ export function AdminDashboard() {
                 Cover photo (optional)
               </label>
               <input
+                id="blog-cover-file"
                 type="file"
                 accept="image/*"
                 onChange={(e) => setBlogCover(e.target.files?.[0] ?? null)}
-                className="mt-2 block w-full text-sm text-slate-600"
+                className="sr-only"
               />
+              <div className="mt-2 flex items-center gap-3">
+                <label
+                  htmlFor="blog-cover-file"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-navy px-3 py-1.5 text-xs font-semibold text-white shadow-md transition-all hover:bg-slate-800"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Upload image
+                </label>
+                {blogCover ? (
+                  <span className="truncate text-sm text-slate-500">
+                    {blogCover.name}
+                  </span>
+                ) : null}
+              </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-600">
                 Attachment (optional)
               </label>
               <input
+                id="blog-attachment-file"
                 type="file"
                 onChange={(e) => setBlogFile(e.target.files?.[0] ?? null)}
-                className="mt-2 block w-full text-sm text-slate-600"
+                className="sr-only"
               />
+              <div className="mt-2 flex items-center gap-3">
+                <label
+                  htmlFor="blog-attachment-file"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-navy px-3 py-1.5 text-xs font-semibold text-white shadow-md transition-all hover:bg-slate-800"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Upload file
+                </label>
+                {blogFile ? (
+                  <span className="truncate text-sm text-slate-500">
+                    {blogFile.name}
+                  </span>
+                ) : null}
+              </div>
             </div>
             {blogMsg ? (
-              <p className="text-sm text-emerald-700">{blogMsg}</p>
+              <p
+                className={`text-sm ${
+                  /published|created|updated/i.test(blogMsg)
+                    ? "text-emerald-700"
+                    : "text-red-600"
+                }`}
+              >
+                {blogMsg}
+              </p>
             ) : null}
-            <Button type="submit" loading={blogLoading}>
-              Publish blog
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" loading={blogLoading}>
+                {blogEditingId ? "Save changes" : "Publish blog"}
+              </Button>
+              {blogEditingId ? (
+                <Button type="button" variant="secondary" onClick={cancelBlogEdit}>
+                  Cancel
+                </Button>
+              ) : null}
+            </div>
           </form>
+
+          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-lg">
+            <h2 className="text-xl font-bold text-navy">Published blogs</h2>
+            {blogListBusy ? (
+              <p className="mt-4 text-sm text-slate-500">Loading…</p>
+            ) : blogList.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-500">No blogs published yet.</p>
+            ) : (
+              <ul className="mt-4 divide-y divide-slate-100">
+                {blogList.map((b) => (
+                  <li
+                    key={b.id}
+                    className="flex items-center justify-between gap-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <Link
+                        href={`/blogs/${b.slug}`}
+                        target="_blank"
+                        className="block truncate text-sm font-semibold text-navy hover:underline"
+                      >
+                        {b.title}
+                      </Link>
+                      <p className="text-xs text-slate-500">
+                        {b.author} · {formatDateTime(b.published_at)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startBlogEdit(b)}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-navy transition-colors hover:bg-slate-200"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleBlogDelete(b)}
+                        disabled={blogDeletingId === b.id}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {blogDeletingId === b.id ? "Deleting…" : "Delete"}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          </div>
         ) : null}
 
         {tab === "testimonials" ? (
           <div className="space-y-6">
+            <form
+              onSubmit={(e) => void handleTestimonialAdd(e)}
+              className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-lg"
+            >
+              <div>
+                <h2 className="text-xl font-bold text-navy">
+                  {tEditingId ? "Edit testimonial" : "Add testimonial"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {tEditingId
+                    ? "Changes go live on the homepage as soon as you save."
+                    : "Goes live on the homepage immediately — no review step."}
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">Name</label>
+                  <Input
+                    required
+                    value={tName}
+                    onChange={(e) => setTName(e.target.value)}
+                    placeholder="e.g. Amina R."
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">
+                    Label (optional)
+                  </label>
+                  <Input
+                    value={tRole}
+                    onChange={(e) => setTRole(e.target.value)}
+                    placeholder="e.g. A-Level student, Parent"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600">
+                  Testimonial
+                </label>
+                <Textarea
+                  required
+                  rows={3}
+                  value={tContent}
+                  onChange={(e) => setTContent(e.target.value)}
+                  placeholder="What did they say about SJ Academy?"
+                  className="mt-1"
+                />
+              </div>
+              {tAddMsg ? (
+                <p
+                  className={`text-sm ${
+                    /added|updated/i.test(tAddMsg)
+                      ? "text-emerald-700"
+                      : "text-red-600"
+                  }`}
+                >
+                  {tAddMsg}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" loading={tAddLoading}>
+                  {tEditingId ? "Save changes" : "Add testimonial"}
+                </Button>
+                {tEditingId ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={cancelTestimonialEdit}
+                  >
+                    Cancel
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-navy">Pending testimonials</h2>
@@ -768,6 +1307,67 @@ export function AdminDashboard() {
                 ))}
               </ul>
             )}
+
+            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-lg">
+              <h2 className="text-xl font-bold text-navy">
+                Approved testimonials
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                These are live in &ldquo;What families say&rdquo; on the homepage.
+              </p>
+              {approvedTBusy ? (
+                <p className="mt-4 text-sm text-slate-500">Loading…</p>
+              ) : approvedT.length === 0 ? (
+                <p className="mt-4 text-sm text-slate-500">
+                  No approved testimonials yet.
+                </p>
+              ) : (
+                <ul className="mt-4 divide-y divide-slate-100">
+                  {approvedT.map((t) => (
+                    <li
+                      key={t.id}
+                      className="flex items-start justify-between gap-4 py-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy">
+                          {t.name}
+                          {t.role ? (
+                            <span className="ml-2 text-xs font-medium text-amber-600">
+                              {t.role}
+                            </span>
+                          ) : null}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-sm text-slate-600">
+                          {t.content}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {formatDateTime(t.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startTestimonialEdit(t)}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-navy transition-colors hover:bg-slate-200"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleApprovedTestimonialDelete(t.id)}
+                          disabled={tDeletingId === t.id}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {tDeletingId === t.id ? "Deleting…" : "Delete"}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </div>
         ) : null}
 

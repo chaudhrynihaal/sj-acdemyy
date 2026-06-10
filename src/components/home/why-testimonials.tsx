@@ -1,6 +1,6 @@
 import { FadeInUp } from "@/components/motion/fade-in-up";
 import type { Testimonial } from "@/lib/data";
-import { TestimonialSubmitDialog } from "@/components/home/testimonial-submit-dialog";
+import { TestimonialSubmitSection } from "@/components/home/testimonial-submit-section";
 import { Sparkles, BookOpen, Target, Heart } from "lucide-react";
 
 const reasons = [
@@ -119,6 +119,9 @@ export function TestimonialsSection({ items }: { items: Testimonial[] }) {
           <TestimonialCard key={t.id} t={t} />
         ))}
       </div>
+      <FadeInUp>
+        <TestimonialSubmitSection />
+      </FadeInUp>
     </section>
   );
 }
