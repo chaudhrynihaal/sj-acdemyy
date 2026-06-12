@@ -48,8 +48,8 @@ export default async function HomePage() {
                   Educationist | English &amp; Sociology Specialist
                 </p>
                 <p className="mx-auto mt-4 max-w-xl text-base text-slate-600 lg:mx-0 lg:text-lg">
-                  Over 23 years of experience specializing in O-Level / A-Level /
-                  IGCSE English and Sociology — taught with structure, warmth, and
+                  Over 23 years of experience specializing in O-Level / IGCSE
+                  English and Sociology — taught with structure, warmth, and
                   relentless attention to exam success.
                 </p>
                 <div className="mt-8 flex flex-wrap justify-center gap-4 lg:justify-start">

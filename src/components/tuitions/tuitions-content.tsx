@@ -13,7 +13,11 @@ import { FadeInUp } from "@/components/motion/fade-in-up";
 import { DemoSessionDialog } from "@/components/tuitions/demo-session-dialog";
 
 const waDigits =
-  process.env.NEXT_PUBLIC_WHATSAPP_E164?.replace(/\D/g, "") || "923000000000";
+  process.env.NEXT_PUBLIC_WHATSAPP_E164?.replace(/\D/g, "") || "923002029179";
+
+const feeWaHref = `https://wa.me/${waDigits}?text=${encodeURIComponent(
+  "Hi SJ Academy, I'd like to know about the fee structure.",
+)}`;
 
 const onlineFeatures = [
   "Recorded sessions for revision",
@@ -22,7 +26,7 @@ const onlineFeatures = [
 ];
 
 const f2fFeatures = [
-  "Premium campus facilities",
+  "Premium facilities",
   "Zero-distraction learning zone",
   "In-person peer collaboration",
 ];
@@ -48,7 +52,9 @@ export function TuitionsContent() {
             </p>
             <div className="flex flex-wrap gap-4">
               <a
-                href="mailto:admissions@sjacademy.com?subject=Fee%20structure%20inquiry"
+                href={feeWaHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center rounded-lg bg-gold px-8 py-4 text-sm font-semibold text-navy shadow-md transition-all hover:brightness-105"
               >
                 Discuss Fee Structure
@@ -169,7 +175,7 @@ export function TuitionsContent() {
                   rel="noopener noreferrer"
                   className="block w-full rounded-lg bg-navy py-4 text-center text-sm font-semibold text-white transition-all hover:opacity-90"
                 >
-                  Visit Our Faisalabad Center
+                  Visit Us
                 </a>
               </div>
             </FadeInUp>
@@ -239,7 +245,9 @@ export function TuitionsContent() {
                 Free Demo Session
               </button>
               <a
-                href="mailto:admissions@sjacademy.com?subject=Fee%20structure%20inquiry"
+                href={feeWaHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-navy px-10 py-5 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90"
               >
                 <Wallet className="h-4 w-4" />

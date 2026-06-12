@@ -21,7 +21,7 @@ const reasons = [
   },
   {
     title: "Supportive environment",
-    body: "Warm, encouraging atmosphere where students feel safe to ask questions and take risks.",
+    body: "Warm, encouraging atmosphere where students feel safe to ask questions and take initiatives.",
     Icon: Heart,
   },
 ];
@@ -58,8 +58,7 @@ export function WhyChooseUs() {
               Why choose us
             </h2>
             <p className="mt-3 max-w-xl text-slate-600">
-              A premium learning experience without the noise — clarity, care,
-              and consistency.
+              A premium learning experience with clarity, care, and consistency.
             </p>
           </div>
         </FadeInUp>
