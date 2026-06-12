@@ -29,6 +29,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} scroll-smooth`}>
+      <head>
+        <meta name="color-scheme" content="light" />
+        <meta name="darkreader-lock" />
+      </head>
       <body suppressHydrationWarning className="min-h-screen flex flex-col bg-white font-sans text-slate-700 antialiased">
         {children}
       </body>

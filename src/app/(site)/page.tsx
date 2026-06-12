@@ -9,7 +9,9 @@ import {
 } from "@/components/home/why-testimonials";
 import { HomeCta } from "@/components/home/home-cta";
 import { LatestContent } from "@/components/home/latest-content";
+import { NoticeBoard } from "@/components/home/notice-board";
 import {
+  getActiveNotices,
   getApprovedTestimonials,
   getBlogs,
   getResources,
@@ -17,12 +19,14 @@ import {
 } from "@/lib/data";
 
 export default async function HomePage() {
-  const [totalStudents, testimonials, blogs, resources] = await Promise.all([
-    getTotalStudents(),
-    getApprovedTestimonials(),
-    getBlogs(),
-    getResources(),
-  ]);
+  const [totalStudents, testimonials, blogs, resources, notices] =
+    await Promise.all([
+      getTotalStudents(),
+      getApprovedTestimonials(),
+      getBlogs(),
+      getResources(),
+      getActiveNotices(),
+    ]);
 
   return (
     <>
@@ -92,6 +96,7 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <NoticeBoard notices={notices} />
       <SubjectSection />
       <LatestContent blogs={blogs.slice(0, 3)} resources={resources.slice(0, 3)} />
       <WhyChooseUs />

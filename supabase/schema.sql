@@ -47,11 +47,30 @@ create table if not exists public.resources (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   subject text not null,
-  file_url text not null,
+  file_url text,
+  files jsonb not null default '[]'::jsonb,
   created_at timestamptz default now(),
   constraint resources_subject check (
     subject in ('English', 'Sociology', 'General')
   )
+);
+
+-- Existing DBs: add multi-file support
+alter table public.resources add column if not exists files jsonb not null default '[]'::jsonb;
+-- Backfill the new files array from any legacy single file_url
+update public.resources
+set files = jsonb_build_array(jsonb_build_object('name', name, 'url', file_url))
+where (files is null or files = '[]'::jsonb) and file_url is not null;
+-- file_url is now optional (kept populated with the first file for back-compat)
+alter table public.resources alter column file_url drop not null;
+
+-- Notice board announcements
+create table if not exists public.notices (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  body text,
+  is_active boolean not null default true,
+  created_at timestamptz default now()
 );
 
 -- Demo / enrolment leads (moderated via status)
@@ -87,6 +106,7 @@ alter table public.site_statistics enable row level security;
 alter table public.testimonials enable row level security;
 alter table public.blogs enable row level security;
 alter table public.resources enable row level security;
+alter table public.notices enable row level security;
 alter table public.enrollments enable row level security;
 
 -- Public reads
@@ -109,6 +129,10 @@ create policy "blogs_select_public" on public.blogs for select using (true);
 drop policy if exists "resources_select_public" on public.resources;
 create policy "resources_select_public" on public.resources for select using (true);
 
+drop policy if exists "notices_select_active" on public.notices;
+create policy "notices_select_active" on public.notices
+  for select using (is_active = true);
+
 drop policy if exists "enrollments_insert_public" on public.enrollments;
 create policy "enrollments_insert_public" on public.enrollments
   for insert
@@ -126,6 +150,9 @@ create policy "blogs_admin_all" on public.blogs for all to authenticated using (
 
 drop policy if exists "resources_admin_all" on public.resources;
 create policy "resources_admin_all" on public.resources for all to authenticated using (true) with check (true);
+
+drop policy if exists "notices_admin_all" on public.notices;
+create policy "notices_admin_all" on public.notices for all to authenticated using (true) with check (true);
 
 drop policy if exists "enrollments_admin_select" on public.enrollments;
 drop policy if exists "enrollments_admin_all" on public.enrollments;

@@ -148,7 +148,7 @@ export function TuitionsContent() {
                   </h3>
                 </div>
                 <p className="mb-8 flex-grow text-sm leading-relaxed text-slate-600">
-                  In-centre sessions in{" "}
+                  In-person sessions in{" "}
                   <span className="font-semibold text-navy">
                     Faisalabad only
                   </span>{" "}
@@ -197,7 +197,10 @@ export function TuitionsContent() {
                       Monday – Friday
                     </p>
                     <p className="text-2xl font-bold text-white">
-                      4:00 PM – 8:30 PM
+                      From 4:00 PM <span className="text-slate-300">onwards</span>
+                    </p>
+                    <p className="mt-1 text-sm text-slate-400">
+                      Flexible evening slots by appointment
                     </p>
                   </div>
                 </div>

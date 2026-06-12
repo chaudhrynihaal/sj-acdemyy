@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
-import type { ResourceItem } from "@/lib/data";
+import type { ResourceFile, ResourceItem } from "@/lib/data";
 import { FadeInUp } from "@/components/motion/fade-in-up";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,10 @@ function subjectTone(s: string): "amber" | "emerald" | "slate" {
   if (s === "English") return "amber";
   if (s === "Sociology") return "emerald";
   return "slate";
+}
+
+function downloadHref(f: ResourceFile) {
+  return `${f.url}?download=${encodeURIComponent(f.name)}`;
 }
 
 export function ResourcesGrid({ resources }: { resources: ResourceItem[] }) {
@@ -85,15 +89,35 @@ export function ResourcesGrid({ resources }: { resources: ResourceItem[] }) {
                     <Badge tone={subjectTone(r.subject)}>{r.subject}</Badge>
                   </div>
                   <div className="mt-8">
-                    <a
-                      href={`${r.file_url}?download=${encodeURIComponent(r.name)}.pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-lg bg-navy px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download
-                    </a>
+                    {r.files.length <= 1 ? (
+                      r.files[0] ? (
+                        <a
+                          href={downloadHref(r.files[0])}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg bg-navy px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </a>
+                      ) : null
+                    ) : (
+                      <ul className="space-y-2">
+                        {r.files.map((f, idx) => (
+                          <li key={idx}>
+                            <a
+                              href={downloadHref(f)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-navy transition-colors hover:border-navy hover:bg-slate-50"
+                            >
+                              <Download className="h-4 w-4 shrink-0 text-gold" />
+                              <span className="truncate">{f.name}</span>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               </div>

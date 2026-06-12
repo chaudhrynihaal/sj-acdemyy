@@ -17,7 +17,8 @@ type Tab =
   | "testimonials"
   | "demo_requests"
   | "enrol_requests"
-  | "workshops";
+  | "workshops"
+  | "notices";
 
 type PendingTestimonial = {
   id: string;
@@ -53,11 +54,22 @@ type WorkshopRow = {
   created_at: string;
 };
 
+type ResourceFileEntry = { name: string; url: string };
+
 type ResourceRow = {
   id: string;
   name: string;
   subject: string;
-  file_url: string;
+  file_url: string | null;
+  files: ResourceFileEntry[] | null;
+  created_at: string;
+};
+
+type NoticeRow = {
+  id: string;
+  title: string;
+  body: string | null;
+  is_active: boolean;
   created_at: string;
 };
 
@@ -129,7 +141,7 @@ export function AdminDashboard() {
 
   const [resName, setResName] = useState("");
   const [resSubject, setResSubject] = useState("English");
-  const [resFile, setResFile] = useState<File | null>(null);
+  const [resFiles, setResFiles] = useState<File[]>([]);
   const [resLoading, setResLoading] = useState(false);
   const [resMsg, setResMsg] = useState<string | null>(null);
   const [resList, setResList] = useState<ResourceRow[]>([]);
@@ -184,6 +196,15 @@ export function AdminDashboard() {
   const [workshopEnrolledStudents, setWorkshopEnrolledStudents] = useState<EnrollmentRequest[]>([]);
   const [workshopEnrolledBusy, setWorkshopEnrolledBusy] = useState(false);
 
+  // Notices tab state
+  const [noticeTitle, setNoticeTitle] = useState("");
+  const [noticeBody, setNoticeBody] = useState("");
+  const [noticeLoading, setNoticeLoading] = useState(false);
+  const [noticeMsg, setNoticeMsg] = useState<string | null>(null);
+  const [noticeList, setNoticeList] = useState<NoticeRow[]>([]);
+  const [noticeListBusy, setNoticeListBusy] = useState(false);
+  const [noticeEditingId, setNoticeEditingId] = useState<string | null>(null);
+
   const db = init.kind === "ok" ? init.client : null;
 
   useEffect(() => {
@@ -205,7 +226,7 @@ export function AdminDashboard() {
     setResListBusy(true);
     const { data, error } = await db
       .from("resources")
-      .select("id,name,subject,file_url,created_at")
+      .select("id,name,subject,file_url,files,created_at")
       .order("created_at", { ascending: false });
     startTransition(() => {
       if (!error && data) setResList(data as ResourceRow[]);
@@ -342,6 +363,19 @@ export function AdminDashboard() {
     });
   }, [db]);
 
+  const loadNoticeList = useCallback(async () => {
+    if (!db) return;
+    setNoticeListBusy(true);
+    const { data, error } = await db
+      .from("notices")
+      .select("id,title,body,is_active,created_at")
+      .order("created_at", { ascending: false });
+    startTransition(() => {
+      if (!error && data) setNoticeList(data as NoticeRow[]);
+      setNoticeListBusy(false);
+    });
+  }, [db]);
+
   useEffect(() => {
     if (!db || tab !== "resources") return;
     void loadResources();
@@ -438,6 +472,11 @@ export function AdminDashboard() {
     };
   }, [db, tab, loadWorkshopEnrolledStudents]);
 
+  useEffect(() => {
+    if (!db || tab !== "notices") return;
+    void loadNoticeList();
+  }, [db, tab, loadNoticeList]);
+
   async function handleLogout() {
     if (db) await db.auth.signOut();
     router.push("/admin/login");
@@ -446,31 +485,41 @@ export function AdminDashboard() {
 
   async function handleResourceSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!db || !resFile) return;
-    if (resFile.size === 0) {
-      setResMsg("Selected file is empty (0 bytes). Re-select the PDF and try again.");
+    if (!db || resFiles.length === 0) return;
+    if (resFiles.some((f) => f.size === 0)) {
+      setResMsg("One of the selected files is empty (0 bytes). Re-select and try again.");
       return;
     }
     setResLoading(true);
     setResMsg(null);
     try {
-      const path = `uploads/${Date.now()}-${safeStorageName(resFile.name)}`;
-      const { error: upErr } = await db.storage
-        .from("resources-bucket")
-        .upload(path, resFile, { upsert: false });
-      if (upErr) throw upErr;
-      const {
-        data: { publicUrl },
-      } = db.storage.from("resources-bucket").getPublicUrl(path);
+      const uploaded: ResourceFileEntry[] = [];
+      for (const file of resFiles) {
+        const path = `uploads/${Date.now()}-${safeStorageName(file.name)}`;
+        const { error: upErr } = await db.storage
+          .from("resources-bucket")
+          .upload(path, file, { upsert: false });
+        if (upErr) throw upErr;
+        const {
+          data: { publicUrl },
+        } = db.storage.from("resources-bucket").getPublicUrl(path);
+        uploaded.push({ name: file.name, url: publicUrl });
+      }
       const { error: insErr } = await db.from("resources").insert({
         name: resName,
         subject: resSubject,
-        file_url: publicUrl,
+        files: uploaded,
+        // keep legacy single column populated with the first file for back-compat
+        file_url: uploaded[0]?.url ?? null,
       });
       if (insErr) throw insErr;
-      setResMsg("Resource published.");
+      setResMsg(
+        uploaded.length === 1
+          ? "Resource published."
+          : `Resource published with ${uploaded.length} files.`,
+      );
       setResName("");
-      setResFile(null);
+      setResFiles([]);
       void loadResources();
     } catch (err) {
       setResMsg(`Upload failed: ${errorMessage(err)}`);
@@ -484,12 +533,24 @@ export function AdminDashboard() {
     setResDeletingId(r.id);
     try {
       const marker = "/object/public/resources-bucket/";
-      const idx = r.file_url.indexOf(marker);
-      if (idx !== -1) {
-        const path = decodeURIComponent(
-          r.file_url.slice(idx + marker.length).split("?")[0],
-        );
-        await db.storage.from("resources-bucket").remove([path]);
+      const urls = [
+        ...(r.files ?? []).map((f) => f.url),
+        ...(r.file_url ? [r.file_url] : []),
+      ];
+      const paths = Array.from(
+        new Set(
+          urls
+            .map((url) => {
+              const idx = url.indexOf(marker);
+              return idx === -1
+                ? null
+                : decodeURIComponent(url.slice(idx + marker.length).split("?")[0]);
+            })
+            .filter((p): p is string => p !== null),
+        ),
+      );
+      if (paths.length > 0) {
+        await db.storage.from("resources-bucket").remove(paths);
       }
       const { error } = await db.from("resources").delete().eq("id", r.id);
       if (error) throw error;
@@ -804,6 +865,69 @@ export function AdminDashboard() {
     void loadWorkshopList();
   }
 
+  async function handleNoticeSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!db) return;
+    setNoticeLoading(true);
+    setNoticeMsg(null);
+    try {
+      if (noticeEditingId) {
+        const { error } = await db
+          .from("notices")
+          .update({
+            title: noticeTitle.trim(),
+            body: noticeBody.trim() || null,
+          })
+          .eq("id", noticeEditingId);
+        if (error) throw error;
+        setNoticeMsg("Notice updated.");
+      } else {
+        const { error } = await db.from("notices").insert({
+          title: noticeTitle.trim(),
+          body: noticeBody.trim() || null,
+          is_active: true,
+        });
+        if (error) throw error;
+        setNoticeMsg("Notice published — it is live on the homepage.");
+      }
+      setNoticeEditingId(null);
+      setNoticeTitle("");
+      setNoticeBody("");
+      void loadNoticeList();
+    } catch (err) {
+      setNoticeMsg(`Could not save notice: ${errorMessage(err)}`);
+    } finally {
+      setNoticeLoading(false);
+    }
+  }
+
+  function startNoticeEdit(n: NoticeRow) {
+    setNoticeEditingId(n.id);
+    setNoticeTitle(n.title);
+    setNoticeBody(n.body ?? "");
+    setNoticeMsg(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelNoticeEdit() {
+    setNoticeEditingId(null);
+    setNoticeTitle("");
+    setNoticeBody("");
+    setNoticeMsg(null);
+  }
+
+  async function toggleNoticeActive(id: string, current: boolean) {
+    if (!db) return;
+    await db.from("notices").update({ is_active: !current }).eq("id", id);
+    void loadNoticeList();
+  }
+
+  async function deleteNotice(id: string) {
+    if (!db) return;
+    await db.from("notices").delete().eq("id", id);
+    void loadNoticeList();
+  }
+
   const tabBtn = (id: Tab, label: string) => (
     <button
       key={id}
@@ -870,6 +994,7 @@ export function AdminDashboard() {
           {tabBtn("demo_requests", "Demo sessions")}
           {tabBtn("enrol_requests", "Course enrolments")}
           {tabBtn("workshops", "Workshops")}
+          {tabBtn("notices", "Notices")}
         </div>
       </header>
 
@@ -909,12 +1034,14 @@ export function AdminDashboard() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-600">File</label>
+                <label className="text-xs font-semibold text-slate-600">
+                  Files <span className="text-slate-400">(select one or more)</span>
+                </label>
                 <input
-                  required
                   id="resource-file"
                   type="file"
-                  onChange={(e) => setResFile(e.target.files?.[0] ?? null)}
+                  multiple
+                  onChange={(e) => setResFiles(Array.from(e.target.files ?? []))}
                   className="sr-only"
                 />
                 <div className="mt-2 flex items-center gap-3">
@@ -923,14 +1050,35 @@ export function AdminDashboard() {
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-navy px-3 py-1.5 text-xs font-semibold text-white shadow-md transition-all hover:bg-slate-800"
                   >
                     <Upload className="h-3.5 w-3.5" />
-                    Upload file
+                    Choose files
                   </label>
-                  {resFile ? (
-                    <span className="truncate text-sm text-slate-500">
-                      {resFile.name}
+                  {resFiles.length > 0 ? (
+                    <span className="text-sm text-slate-500">
+                      {resFiles.length} file{resFiles.length > 1 ? "s" : ""} selected
                     </span>
                   ) : null}
                 </div>
+                {resFiles.length > 0 ? (
+                  <ul className="mt-3 space-y-1.5">
+                    {resFiles.map((f, idx) => (
+                      <li
+                        key={`${f.name}-${idx}`}
+                        className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600"
+                      >
+                        <span className="truncate">{f.name}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setResFiles((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          className="shrink-0 text-xs font-semibold text-red-500 hover:text-red-600"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
               {resMsg ? (
                 <p
@@ -943,7 +1091,11 @@ export function AdminDashboard() {
                   {resMsg}
                 </p>
               ) : null}
-              <Button type="submit" loading={resLoading}>
+              <Button
+                type="submit"
+                loading={resLoading}
+                disabled={resFiles.length === 0}
+              >
                 Publish resource
               </Button>
             </form>
@@ -964,17 +1116,39 @@ export function AdminDashboard() {
                       className="flex items-center justify-between gap-4 py-3"
                     >
                       <div className="min-w-0">
-                        <a
-                          href={r.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block truncate text-sm font-semibold text-navy hover:underline"
-                        >
+                        <p className="truncate text-sm font-semibold text-navy">
                           {r.name}
-                        </a>
-                        <p className="text-xs text-slate-500">
-                          {r.subject} · {formatDateTime(r.created_at)}
                         </p>
+                        <p className="text-xs text-slate-500">
+                          {r.subject} · {(r.files?.length ?? (r.file_url ? 1 : 0))} file
+                          {(r.files?.length ?? (r.file_url ? 1 : 0)) === 1 ? "" : "s"} ·{" "}
+                          {formatDateTime(r.created_at)}
+                        </p>
+                        {(r.files ?? []).length > 0 ? (
+                          <ul className="mt-1.5 space-y-0.5">
+                            {(r.files ?? []).map((f, idx) => (
+                              <li key={idx} className="truncate text-xs">
+                                <a
+                                  href={f.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-amber-700 hover:underline"
+                                >
+                                  {f.name}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : r.file_url ? (
+                          <a
+                            href={r.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 block truncate text-xs text-amber-700 hover:underline"
+                          >
+                            Download
+                          </a>
+                        ) : null}
                       </div>
                       <button
                         type="button"
@@ -1870,6 +2044,143 @@ export function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {tab === "notices" ? (
+          <div className="space-y-8">
+            <form
+              onSubmit={(e) => void handleNoticeSubmit(e)}
+              className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-lg"
+            >
+              <div>
+                <h2 className="text-xl font-bold text-navy">
+                  {noticeEditingId ? "Edit notice" : "Post a notice"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {noticeEditingId
+                    ? "Changes go live on the homepage as soon as you save."
+                    : "Appears on the homepage notice board immediately. Hide it to take it down without deleting."}
+                </p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600">Title</label>
+                <Input
+                  required
+                  value={noticeTitle}
+                  onChange={(e) => setNoticeTitle(e.target.value)}
+                  placeholder="e.g. Eid holidays — classes resume 9 April"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600">
+                  Message <span className="text-slate-400">(optional)</span>
+                </label>
+                <Textarea
+                  value={noticeBody}
+                  onChange={(e) => setNoticeBody(e.target.value)}
+                  placeholder="Add any extra detail for this announcement…"
+                  className="mt-1 min-h-[100px]"
+                />
+              </div>
+              {noticeMsg ? (
+                <p
+                  className={`text-sm ${
+                    noticeMsg.startsWith("Could")
+                      ? "text-red-600"
+                      : "text-emerald-700"
+                  }`}
+                >
+                  {noticeMsg}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" loading={noticeLoading}>
+                  {noticeEditingId ? "Save changes" : "Publish notice"}
+                </Button>
+                {noticeEditingId ? (
+                  <Button type="button" variant="secondary" onClick={cancelNoticeEdit}>
+                    Cancel
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-navy">All notices</h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => void loadNoticeList()}
+                  loading={noticeListBusy}
+                >
+                  Refresh
+                </Button>
+              </div>
+              {noticeList.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-slate-600">
+                  No notices yet.
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {noticeList.map((n) => (
+                    <li
+                      key={n.id}
+                      className="rounded-2xl border border-slate-100 bg-white p-5 shadow-lg"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-navy">{n.title}</p>
+                          <span
+                            className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              n.is_active
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            {n.is_active ? "Live" : "Hidden"}
+                          </span>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+                          {formatDateTime(n.created_at)}
+                        </span>
+                      </div>
+                      {n.body ? (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
+                          {n.body}
+                        </p>
+                      ) : null}
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => startNoticeEdit(n)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={n.is_active ? "secondary" : "primary"}
+                          onClick={() => void toggleNoticeActive(n.id, n.is_active)}
+                        >
+                          {n.is_active ? "Hide" : "Show"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="text-xs text-red-500 hover:text-red-600"
+                          onClick={() => void deleteNotice(n.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>
