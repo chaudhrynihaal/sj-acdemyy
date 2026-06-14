@@ -98,6 +98,13 @@ function safeStorageName(name: string): string {
   return safeExt ? `${safeBase}.${safeExt}` : safeBase;
 }
 
+function resourceStoragePath(url: string): string | null {
+  const marker = "/object/public/resources-bucket/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return decodeURIComponent(url.slice(idx + marker.length).split("?")[0]);
+}
+
 function errorMessage(err: unknown): string {
   if (
     err &&
@@ -147,6 +154,8 @@ export function AdminDashboard() {
   const [resList, setResList] = useState<ResourceRow[]>([]);
   const [resListBusy, setResListBusy] = useState(false);
   const [resDeletingId, setResDeletingId] = useState<string | null>(null);
+  const [resEditingId, setResEditingId] = useState<string | null>(null);
+  const [resExistingFiles, setResExistingFiles] = useState<ResourceFileEntry[]>([]);
 
   const [blogTitle, setBlogTitle] = useState("");
   const [blogAuthor, setBlogAuthor] = useState("");
@@ -483,11 +492,39 @@ export function AdminDashboard() {
     router.refresh();
   }
 
+  function resourceFilesOf(r: ResourceRow): ResourceFileEntry[] {
+    if (r.files && r.files.length > 0) return r.files;
+    return r.file_url ? [{ name: r.name, url: r.file_url }] : [];
+  }
+
+  function startResourceEdit(r: ResourceRow) {
+    setResEditingId(r.id);
+    setResName(r.name);
+    setResSubject(r.subject);
+    setResExistingFiles(resourceFilesOf(r));
+    setResFiles([]);
+    setResMsg(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelResourceEdit() {
+    setResEditingId(null);
+    setResName("");
+    setResSubject("English");
+    setResExistingFiles([]);
+    setResFiles([]);
+    setResMsg(null);
+  }
+
   async function handleResourceSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!db || resFiles.length === 0) return;
+    if (!db) return;
     if (resFiles.some((f) => f.size === 0)) {
       setResMsg("One of the selected files is empty (0 bytes). Re-select and try again.");
+      return;
+    }
+    if (resExistingFiles.length + resFiles.length === 0) {
+      setResMsg("Add at least one file.");
       return;
     }
     setResLoading(true);
@@ -505,20 +542,52 @@ export function AdminDashboard() {
         } = db.storage.from("resources-bucket").getPublicUrl(path);
         uploaded.push({ name: file.name, url: publicUrl });
       }
-      const { error: insErr } = await db.from("resources").insert({
-        name: resName,
-        subject: resSubject,
-        files: uploaded,
-        // keep legacy single column populated with the first file for back-compat
-        file_url: uploaded[0]?.url ?? null,
-      });
-      if (insErr) throw insErr;
-      setResMsg(
-        uploaded.length === 1
-          ? "Resource published."
-          : `Resource published with ${uploaded.length} files.`,
-      );
+      const finalFiles = [...resExistingFiles, ...uploaded];
+
+      if (resEditingId) {
+        const { error: updErr } = await db
+          .from("resources")
+          .update({
+            name: resName,
+            subject: resSubject,
+            files: finalFiles,
+            file_url: finalFiles[0]?.url ?? null,
+          })
+          .eq("id", resEditingId);
+        if (updErr) throw updErr;
+
+        // remove any existing files the user dropped during the edit
+        const original = resList.find((x) => x.id === resEditingId);
+        if (original) {
+          const keptUrls = new Set(finalFiles.map((f) => f.url));
+          const removedPaths = resourceFilesOf(original)
+            .filter((f) => !keptUrls.has(f.url))
+            .map((f) => resourceStoragePath(f.url))
+            .filter((p): p is string => p !== null);
+          if (removedPaths.length > 0) {
+            await db.storage.from("resources-bucket").remove(removedPaths);
+          }
+        }
+        setResMsg("Resource updated.");
+      } else {
+        const { error: insErr } = await db.from("resources").insert({
+          name: resName,
+          subject: resSubject,
+          files: finalFiles,
+          // keep legacy single column populated with the first file for back-compat
+          file_url: finalFiles[0]?.url ?? null,
+        });
+        if (insErr) throw insErr;
+        setResMsg(
+          finalFiles.length === 1
+            ? "Resource published."
+            : `Resource published with ${finalFiles.length} files.`,
+        );
+      }
+      setResEditingId(null);
       setResName("");
+      setResSubject("English");
+      setResExistingFiles([]);
       setResFiles([]);
       void loadResources();
     } catch (err) {
@@ -532,7 +601,6 @@ export function AdminDashboard() {
     if (!db) return;
     setResDeletingId(r.id);
     try {
-      const marker = "/object/public/resources-bucket/";
       const urls = [
         ...(r.files ?? []).map((f) => f.url),
         ...(r.file_url ? [r.file_url] : []),
@@ -540,12 +608,7 @@ export function AdminDashboard() {
       const paths = Array.from(
         new Set(
           urls
-            .map((url) => {
-              const idx = url.indexOf(marker);
-              return idx === -1
-                ? null
-                : decodeURIComponent(url.slice(idx + marker.length).split("?")[0]);
-            })
+            .map((url) => resourceStoragePath(url))
             .filter((p): p is string => p !== null),
         ),
       );
@@ -1011,7 +1074,9 @@ export function AdminDashboard() {
               onSubmit={(e) => void handleResourceSubmit(e)}
               className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-lg"
             >
-              <h2 className="text-xl font-bold text-navy">Upload resource</h2>
+              <h2 className="text-xl font-bold text-navy">
+                {resEditingId ? "Edit resource" : "Upload resource"}
+              </h2>
               <div>
                 <label className="text-xs font-semibold text-slate-600">Name</label>
                 <Input
@@ -1033,15 +1098,71 @@ export function AdminDashboard() {
                   <option>General</option>
                 </select>
               </div>
+              {resEditingId && resExistingFiles.length > 0 ? (
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">
+                    Current files
+                  </label>
+                  <ul className="mt-2 space-y-1.5">
+                    {resExistingFiles.map((f, idx) => (
+                      <li
+                        key={`${f.url}-${idx}`}
+                        className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600"
+                      >
+                        <a
+                          href={f.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate text-amber-700 hover:underline"
+                        >
+                          {f.name}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setResExistingFiles((prev) =>
+                              prev.filter((_, i) => i !== idx),
+                            )
+                          }
+                          className="shrink-0 text-xs font-semibold text-red-500 hover:text-red-600"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               <div>
                 <label className="text-xs font-semibold text-slate-600">
-                  Files <span className="text-slate-400">(select one or more)</span>
+                  {resEditingId ? (
+                    <>
+                      Add files <span className="text-slate-400">(optional)</span>
+                    </>
+                  ) : (
+                    <>
+                      Files <span className="text-slate-400">(select one or more)</span>
+                    </>
+                  )}
                 </label>
                 <input
                   id="resource-file"
                   type="file"
                   multiple
-                  onChange={(e) => setResFiles(Array.from(e.target.files ?? []))}
+                  onChange={(e) => {
+                    const picked = Array.from(e.target.files ?? []);
+                    setResFiles((prev) => {
+                      const seen = new Set<string>();
+                      return [...prev, ...picked].filter((f) => {
+                        const key = `${f.name}-${f.size}`;
+                        if (seen.has(key)) return false;
+                        seen.add(key);
+                        return true;
+                      });
+                    });
+                    // reset so re-picking the same file still fires onChange
+                    e.target.value = "";
+                  }}
                   className="sr-only"
                 />
                 <div className="mt-2 flex items-center gap-3">
@@ -1091,13 +1212,24 @@ export function AdminDashboard() {
                   {resMsg}
                 </p>
               ) : null}
-              <Button
-                type="submit"
-                loading={resLoading}
-                disabled={resFiles.length === 0}
-              >
-                Publish resource
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  loading={resLoading}
+                  disabled={resExistingFiles.length + resFiles.length === 0}
+                >
+                  {resEditingId ? "Save changes" : "Publish resource"}
+                </Button>
+                {resEditingId ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={cancelResourceEdit}
+                  >
+                    Cancel
+                  </Button>
+                ) : null}
+              </div>
             </form>
 
             <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-lg">
@@ -1150,15 +1282,25 @@ export function AdminDashboard() {
                           </a>
                         ) : null}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => void handleResourceDelete(r)}
-                        disabled={resDeletingId === r.id}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {resDeletingId === r.id ? "Deleting…" : "Delete"}
-                      </button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startResourceEdit(r)}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-navy transition-colors hover:bg-slate-200"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleResourceDelete(r)}
+                          disabled={resDeletingId === r.id}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {resDeletingId === r.id ? "Deleting…" : "Delete"}
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>

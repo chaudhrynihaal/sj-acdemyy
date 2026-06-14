@@ -68,7 +68,7 @@ export function ResourcesGrid({ resources }: { resources: ResourceItem[] }) {
         ))}
       </FadeInUp>
 
-      <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-12 grid items-start gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.length === 0 ? (
           <p className="col-span-full text-center text-slate-600">
             No resources in this category yet.
@@ -76,19 +76,19 @@ export function ResourcesGrid({ resources }: { resources: ResourceItem[] }) {
         ) : (
           filtered.map((r, i) => (
             <FadeInUp key={r.id} delay={Math.min(i * 0.04, 0.2)}>
-              <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:border-navy hover:shadow-md">
+              <div className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:border-navy hover:shadow-md">
                 <div className="h-2 w-full bg-gold" />
-                <div className="flex flex-grow flex-col p-8">
+                <div className="flex flex-col p-8">
                   <p className="text-xs font-semibold uppercase tracking-widest text-gold">
                     {formatDate(r.created_at)}
                   </p>
                   <h2 className="font-display mt-3 text-xl font-bold leading-snug text-navy">
                     {r.name}
                   </h2>
-                  <div className="mt-3 flex-1">
+                  <div className="mt-3">
                     <Badge tone={subjectTone(r.subject)}>{r.subject}</Badge>
                   </div>
-                  <div className="mt-8">
+                  <div className="mt-6">
                     {r.files.length <= 1 ? (
                       r.files[0] ? (
                         <a
