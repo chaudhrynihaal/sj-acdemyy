@@ -7,6 +7,7 @@ import { GraduationCap, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
+  { href: "/", label: "Home" },
   { href: "/tuitions", label: "Tuitions" },
   { href: "/workshops", label: "Workshops" },
   { href: "/blogs", label: "Blogs" },
