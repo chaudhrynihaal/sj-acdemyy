@@ -197,3 +197,143 @@ create policy "testimonials_auth_upload" on storage.objects for insert to authen
 -- Optional seed for testing testimonial moderation (uncomment to run):
 -- insert into public.testimonials (name, content, role, status)
 -- values ('Sample Parent', 'Wonderful experience with the academy.', 'Parent', 'pending');
+
+
+-- ════════════════════════════════════════════════════════════════════════
+-- SECURITY HARDENING — admin allowlist (run this whole section)
+-- ════════════════════════════════════════════════════════════════════════
+-- Problem: the policies above granted full access to ANY authenticated user.
+-- If Supabase sign-ups are enabled (the default), a stranger could register
+-- with the public anon key and gain admin access to all data, including
+-- enrollment PII. This section restricts admin access to an explicit allowlist.
+--
+-- ALSO REQUIRED (dashboard, cannot be done in SQL):
+--   Supabase → Authentication → Providers/Sign In → DISABLE "Allow new users
+--   to sign up". Create admin users via the Supabase dashboard only.
+-- ────────────────────────────────────────────────────────────────────────
+
+-- 1) Allowlist table: which auth users are admins.
+create table if not exists public.admins (
+  id uuid primary key references auth.users (id) on delete cascade,
+  created_at timestamptz default now()
+);
+alter table public.admins enable row level security;
+
+-- 2) Seed it with your CURRENT users so you are not locked out.
+--    On a fresh project this is just you. Verify afterwards:
+--      select id from public.admins;   -- should list only trusted admins
+insert into public.admins (id)
+select id from auth.users
+on conflict (id) do nothing;
+
+-- 3) Helper: is the current request an allowlisted admin?
+--    SECURITY DEFINER so it can read public.admins regardless of RLS.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.admins a where a.id = auth.uid()
+  );
+$$;
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+
+-- 4) Re-create every admin policy to require is_admin() instead of any
+--    authenticated user. (Recreated by name, so this overrides the versions
+--    defined earlier in this file.)
+drop policy if exists "stats_admin_all" on public.site_statistics;
+create policy "stats_admin_all" on public.site_statistics
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "testimonials_admin_all" on public.testimonials;
+create policy "testimonials_admin_all" on public.testimonials
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "blogs_admin_all" on public.blogs;
+create policy "blogs_admin_all" on public.blogs
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "resources_admin_all" on public.resources;
+create policy "resources_admin_all" on public.resources
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "notices_admin_all" on public.notices;
+create policy "notices_admin_all" on public.notices
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "enrollments_admin_all" on public.enrollments;
+create policy "enrollments_admin_all" on public.enrollments
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- Admins can see the allowlist; nobody else can.
+drop policy if exists "admins_self_select" on public.admins;
+create policy "admins_self_select" on public.admins
+  for select to authenticated using (public.is_admin());
+
+-- 5) Storage uploads also limited to admins (was any authenticated user).
+drop policy if exists "resources_auth_upload" on storage.objects;
+create policy "resources_auth_upload" on storage.objects
+  for insert to authenticated with check (bucket_id = 'resources-bucket' and public.is_admin());
+
+drop policy if exists "blogs_auth_upload" on storage.objects;
+create policy "blogs_auth_upload" on storage.objects
+  for insert to authenticated with check (bucket_id = 'blogs-bucket' and public.is_admin());
+
+drop policy if exists "testimonials_auth_upload" on storage.objects;
+create policy "testimonials_auth_upload" on storage.objects
+  for insert to authenticated with check (bucket_id = 'testimonials-images' and public.is_admin());
+
+-- Allow admins to delete their own bucket objects (used by resource/blog delete).
+drop policy if exists "resources_admin_delete" on storage.objects;
+create policy "resources_admin_delete" on storage.objects
+  for delete to authenticated using (bucket_id = 'resources-bucket' and public.is_admin());
+
+drop policy if exists "blogs_admin_delete" on storage.objects;
+create policy "blogs_admin_delete" on storage.objects
+  for delete to authenticated using (bucket_id = 'blogs-bucket' and public.is_admin());
+
+
+-- ════════════════════════════════════════════════════════════════════════
+-- WORKSHOPS — table was created outside this file (schema drift); defined
+-- here so a fresh database is complete and the policies are version-controlled.
+-- ════════════════════════════════════════════════════════════════════════
+create table if not exists public.workshops (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  date_time timestamptz not null,
+  details text,
+  description text,
+  course text not null default 'General',
+  is_active boolean not null default true,
+  created_at timestamptz default now()
+);
+alter table public.workshops enable row level security;
+
+drop policy if exists "workshops_select_active" on public.workshops;
+create policy "workshops_select_active" on public.workshops
+  for select using (is_active = true);
+
+drop policy if exists "workshops_admin_all" on public.workshops;
+create policy "workshops_admin_all" on public.workshops
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+
+-- ════════════════════════════════════════════════════════════════════════
+-- PERFORMANCE — indexes on frequently filtered / ordered columns
+-- ════════════════════════════════════════════════════════════════════════
+create index if not exists enrollments_source_status_idx
+  on public.enrollments (source, status, created_at desc);
+create index if not exists testimonials_status_idx
+  on public.testimonials (status, created_at desc);
+create index if not exists blogs_published_at_idx
+  on public.blogs (published_at desc);
+create index if not exists resources_created_at_idx
+  on public.resources (created_at desc);
+create index if not exists notices_active_idx
+  on public.notices (is_active, created_at desc);
+create index if not exists workshops_active_idx
+  on public.workshops (is_active, date_time);

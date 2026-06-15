@@ -5,6 +5,7 @@ import { MessageSquareHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useHoneypot } from "@/components/forms/honeypot";
 
 export function TestimonialSubmitSection() {
   const [name, setName] = useState("");
@@ -13,6 +14,7 @@ export function TestimonialSubmitSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const { company, honeypotField } = useHoneypot();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +28,7 @@ export function TestimonialSubmitSection() {
           name: name.trim(),
           content: content.trim(),
           role: role.trim() || null,
+          company,
         }),
       });
       const payload = (await res.json().catch(() => ({}))) as { error?: string };
@@ -75,6 +78,7 @@ export function TestimonialSubmitSection() {
             </div>
           ) : (
             <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+              {honeypotField}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-xs font-semibold text-slate-600">

@@ -26,6 +26,13 @@ export async function POST(request: Request) {
   }
 
   const b = body as Record<string, unknown>;
+
+  // Honeypot: a hidden field real users never see. Bots fill it → silently
+  // accept (return ok) but skip the insert/email so they get no signal.
+  if (typeof b.company === "string" && b.company.trim() !== "") {
+    return NextResponse.json({ ok: true });
+  }
+
   const full_name = typeof b.full_name === "string" ? clamp(b.full_name.trim(), 200) : "";
   const email = typeof b.email === "string" ? b.email.trim().slice(0, 320) : "";
   const phone =

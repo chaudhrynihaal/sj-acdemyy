@@ -523,6 +523,12 @@ export function AdminDashboard() {
       setResMsg("One of the selected files is empty (0 bytes). Re-select and try again.");
       return;
     }
+    const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25 MB per file
+    const tooBig = resFiles.find((f) => f.size > MAX_FILE_BYTES);
+    if (tooBig) {
+      setResMsg(`"${tooBig.name}" is larger than 25 MB. Please upload a smaller file.`);
+      return;
+    }
     if (resExistingFiles.length + resFiles.length === 0) {
       setResMsg("Add at least one file.");
       return;

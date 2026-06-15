@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useHoneypot } from "@/components/forms/honeypot";
 
 type Props = {
   open: boolean;
@@ -21,6 +22,7 @@ export function WorkshopEnrolModal({ open, onClose, workshopName }: Props) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { company, honeypotField } = useHoneypot();
 
   if (!open) return null;
 
@@ -43,6 +45,7 @@ export function WorkshopEnrolModal({ open, onClose, workshopName }: Props) {
           message: message || undefined,
           source: "workshop_enrol",
           subject: workshopName,
+          company,
         }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
@@ -104,6 +107,7 @@ export function WorkshopEnrolModal({ open, onClose, workshopName }: Props) {
             </div>
           ) : (
             <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+              {honeypotField}
               <div>
                 <label className="text-xs font-semibold text-slate-600">
                   Full Name <span className="text-red-500">*</span>

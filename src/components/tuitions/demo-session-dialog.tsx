@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useHoneypot } from "@/components/forms/honeypot";
 
 type DemoSessionDialogProps = {
   open: boolean;
@@ -19,6 +20,7 @@ export function DemoSessionDialog({ open, onClose }: DemoSessionDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const { company, honeypotField } = useHoneypot();
 
   if (!open) return null;
 
@@ -36,6 +38,7 @@ export function DemoSessionDialog({ open, onClose }: DemoSessionDialogProps) {
           phone: phone || null,
           message: message || null,
           source: "demo_session",
+          company,
         }),
       });
       const payload = (await res.json().catch(() => ({}))) as { error?: string };
@@ -84,6 +87,7 @@ export function DemoSessionDialog({ open, onClose }: DemoSessionDialogProps) {
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {honeypotField}
             <div>
               <label className="text-xs font-semibold text-slate-600">
                 Full name
