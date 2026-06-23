@@ -85,7 +85,7 @@ export function WorkshopEnrolModal({ open, onClose, workshopName }: Props) {
             <X className="h-4 w-4" />
           </button>
           <p className="text-xs font-bold uppercase tracking-widest text-amber-500">
-            Workshop Enrolment
+            Workshop Enrollment
           </p>
           <h2 className="mt-1 text-lg font-extrabold text-navy">{workshopName}</h2>
         </div>
@@ -162,7 +162,7 @@ export function WorkshopEnrolModal({ open, onClose, workshopName }: Props) {
                 </p>
               ) : null}
               <Button type="submit" loading={loading} className="w-full">
-                Submit Enrolment
+                Submit Enrollment
               </Button>
             </form>
           )}

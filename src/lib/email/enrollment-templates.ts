@@ -149,14 +149,14 @@ export function applicantDecisionEmail(params: {
     closing = "Thank you again for considering SJ Academy.";
   } else if (!isDemo && approved) {
     subject = "[SJ Academy] Your course enquiry has been approved";
-    eyebrow = "Course enrolment";
+    eyebrow = "Course enrollment";
     headline = "You're in — welcome to SJ Academy";
     bodyText = `Thank you for your interest in ${course} at SJ Academy. Your enquiry has been approved, and a member of our admissions team will be in touch shortly with the next steps.`;
     bodyHtml = `Thank you for your interest in <strong style="color:#0f172a;">${escapeHtml(course)}</strong> at SJ Academy. Your enquiry has been approved, and a member of our admissions team will be in touch shortly with the next steps.`;
     closing = "We look forward to supporting your learning journey.";
   } else {
     subject = "[SJ Academy] Update on your course enquiry";
-    eyebrow = "Course enrolment";
+    eyebrow = "Course enrollment";
     headline = "Update on your course enquiry";
     bodyText = `Thank you for your interest in ${course} at SJ Academy. After careful review, we're unable to proceed with this enquiry at present. If you'd like feedback or to explore another intake or programme, our admissions team is here to help.`;
     bodyHtml = `Thank you for your interest in <strong style="color:#0f172a;">${escapeHtml(course)}</strong> at SJ Academy. After careful review, we're unable to proceed with this enquiry at present. If you'd like feedback or to explore another intake or programme, our admissions team is here to help.`;

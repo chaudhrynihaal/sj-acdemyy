@@ -1061,7 +1061,7 @@ export function AdminDashboard() {
           {tabBtn("blogs", "Blogs")}
           {tabBtn("testimonials", "Testimonials")}
           {tabBtn("demo_requests", "Demo sessions")}
-          {tabBtn("enrol_requests", "Course enrolments")}
+          {tabBtn("enrol_requests", "Course enrollments")}
           {tabBtn("workshops", "Workshops")}
           {tabBtn("notices", "Notices")}
         </div>
@@ -1771,9 +1771,9 @@ export function AdminDashboard() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-navy">Course enrolment requests</h2>
+                <h2 className="text-xl font-bold text-navy">Course enrollment requests</h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  From home subject cards &ldquo;Enrol Now&rdquo;. Subject is stored on each row.
+                  From home subject cards &ldquo;Enroll Now&rdquo;. Subject is stored on each row.
                 </p>
               </div>
               <Button
@@ -1787,7 +1787,7 @@ export function AdminDashboard() {
             </div>
             {enrolRequests.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-slate-600">
-                No pending enrolment requests.
+                No pending enrollment requests.
               </p>
             ) : (
               <ul className="space-y-4">
@@ -1850,7 +1850,7 @@ export function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-navy">Enrolled students</h3>
-                  <p className="mt-0.5 text-sm text-slate-500">Approved course enrolments.</p>
+                  <p className="mt-0.5 text-sm text-slate-500">Approved course enrollments.</p>
                 </div>
                 <Button
                   type="button"
@@ -2051,9 +2051,9 @@ export function AdminDashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-navy">Workshop enrolment requests</h2>
+                  <h2 className="text-xl font-bold text-navy">Workshop enrollment requests</h2>
                   <p className="mt-1 text-sm text-slate-600">
-                    Pending requests submitted via the Workshops page enrolment form.
+                    Pending requests submitted via the Workshops page enrollment form.
                   </p>
                 </div>
                 <Button
@@ -2067,7 +2067,7 @@ export function AdminDashboard() {
               </div>
               {workshopEnrolRequests.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-slate-600">
-                  No pending workshop enrolment requests.
+                  No pending workshop enrollment requests.
                 </p>
               ) : (
                 <ul className="space-y-4">
@@ -2135,7 +2135,7 @@ export function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-navy">Workshop enrolled students</h3>
-                  <p className="mt-0.5 text-sm text-slate-500">Approved workshop enrolments.</p>
+                  <p className="mt-0.5 text-sm text-slate-500">Approved workshop enrollments.</p>
                 </div>
                 <Button
                   type="button"

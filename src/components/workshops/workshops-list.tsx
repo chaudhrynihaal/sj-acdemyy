@@ -90,7 +90,7 @@ export function WorkshopsList({ workshops }: Props) {
                       onClick={() => setModalWorkshop(w)}
                       className="w-full"
                     >
-                      Enrol Now
+                      Enroll Now
                     </Button>
                   </div>
                 </div>

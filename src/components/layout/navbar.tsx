@@ -55,7 +55,7 @@ export function Navbar() {
             href="/tuitions"
             className="hidden rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:scale-[1.02] hover:bg-slate-800 hover:shadow-lg md:inline-flex"
           >
-            Enrol Now
+            Enroll Now
           </Link>
 
           {/* Hamburger — mobile only */}
@@ -96,7 +96,7 @@ export function Navbar() {
             onClick={() => setOpen(false)}
             className="mt-4 block w-full rounded-full bg-navy py-3 text-center text-sm font-semibold text-white shadow-md"
           >
-            Enrol Now
+            Enroll Now
           </Link>
         </nav>
       )}

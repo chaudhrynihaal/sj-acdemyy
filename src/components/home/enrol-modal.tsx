@@ -79,7 +79,7 @@ export function EnrolModal({ open, onClose, subject }: EnrolModalProps) {
         >
           <X className="h-5 w-5" />
         </button>
-        <h2 className="text-xl font-bold text-navy">Enrol — {subject}</h2>
+        <h2 className="text-xl font-bold text-navy">Enroll — {subject}</h2>
         <p className="mt-1 text-sm text-slate-600">
           Leave your details and we will get back to you shortly.
         </p>
